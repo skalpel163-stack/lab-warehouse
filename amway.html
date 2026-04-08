@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amway — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="ti ti-building-store me-2" style="color:#00c853;"></i>Amway
+                    </h2>
+                    <div class="text-muted">Товары выставленные на продажу</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-yellow admin-only" style="display:none;" onclick="openAddAvitoModal()">
+                        <i class="ti ti-plus"></i> Добавить на Amway
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportAvitoCSV()">
+                        <i class="ti ti-download"></i> Экспорт
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-strip mb-3">
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-total">0</span>
+                    <span class="stats-strip-label">позиций</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-qty">0</span>
+                    <span class="stats-strip-label">штук</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item stats-strip-total">
+                    <span class="stats-strip-value" id="stat-value">0 ₽</span>
+                    <span class="stats-strip-label">стоимость</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-no-photo">0</span>
+                    <span class="stats-strip-label">без фото</span>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="card mb-3">
+                <div class="card-body p-2">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <input type="text" class="form-control" id="search" placeholder="Поиск..." oninput="debounceSearch()">
+                        </div>
+                        <div class="col-auto">
+                            <select class="form-select" id="sort-select" onchange="renderItems()">
+                                <option value="name">По названию</option>
+                                <option value="price-asc">Сначала дешёвые</option>
+                                <option value="price-desc">Сначала дорогие</option>
+                                <option value="qty-desc">По количеству</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid view like catalog -->
+            <div class="row row-cards" id="amway-grid">
+                <div class="col-12 empty-state">
+                    <div class="icon"><i class="ti ti-package"></i></div>
+                    <p>Загрузка...</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal modal-blur fade" id="product-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" id="product-modal-content"></div>
+    </div>
+</div>
+
+<!-- Add to Avito modal -->
+<div class="modal modal-blur fade" id="add-amway-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить товар на Amway</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitAddAvito(event)">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label required">Название</label>
+                                <input type="text" class="form-control" id="aa-name" required placeholder="Двигатель Samsung...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label required">Кол-во</label>
+                                <input type="number" class="form-control" id="aa-qty" required value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label required">Цена, ₽</label>
+                                <input type="number" class="form-control" id="aa-price" required placeholder="1500">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Группа</label>
+                                <select class="form-select" id="aa-group"></select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Ответственный</label>
+                                <select class="form-select" id="aa-responsible"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Примечание</label>
+                        <textarea class="form-control" id="aa-notes" rows="2" placeholder="Ссылка на объявление, описание..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Фото</label>
+                        <div style="border:2px dashed var(--lr-border);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--lr-bg);" onclick="document.getElementById('aa-photo').click()">
+                            <i class="ti ti-camera-plus" style="font-size:32px;color:var(--lr-text-muted);"></i>
+                            <p class="text-muted mt-1 mb-0" style="font-size:12px;">Нажмите для загрузки</p>
+                            <img id="aa-photo-preview" style="max-width:100%;max-height:150px;display:none;border-radius:8px;margin-top:8px;">
+                        </div>
+                        <input type="file" id="aa-photo" accept="image/*" style="display:none" onchange="previewAaPhoto(this)">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-yellow"><i class="ti ti-plus"></i> Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Write-off modal -->
+<div class="modal modal-blur fade" id="writeoff-amway-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Списать / Продано</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitAvitoWriteOff(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="awo-code">
+                    <input type="hidden" id="awo-warehouse">
+                    <div class="mb-3">
+                        <label class="form-label">Товар</label>
+                        <input type="text" class="form-control" id="awo-name" readonly style="background:var(--lr-bg);">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Количество</label>
+                        <input type="number" class="form-control" id="awo-qty" required value="1" min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Причина</label>
+                        <input type="text" class="form-control" id="awo-reason" required placeholder="Продано на Amway / возврат на склад">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger"><i class="ti ti-file-minus"></i> Списать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightbox" onclick="if(event.target===this)this.classList.remove('active')">
+    <button class="lightbox-close" onclick="document.getElementById('lightbox').classList.remove('active')">&times;</button>
+    <img id="lightbox-img" src="">
+</div>
+
+<input type="file" id="detail-photo-input" accept="image/*" style="display:none" onchange="uploadPhotoForCurrent(this)">
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const currentUser = Auth.require();
+initNavbar('amway');
+
+if (Auth.isAdmin()) {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+}
+
+let allItems = [];
+let amwayItems = [];
+let searchTimer = null;
+let currentDetailCode = null;
+
+document.addEventListener('DOMContentLoaded', loadData);
+
+async function loadData() {
+    try {
+        allItems = await fetchWarehouseData();
+        // Amway = items with locация = AMWAY or item_code contains AMWAY
+        amwayItems = allItems.filter(i =>
+            (i.locация && (i.locация === 'Amway' || i.locация === 'AMWAY' || i.locация.toUpperCase() === 'AMWAY')) ||
+            (i.notes && i.notes.toLowerCase().includes('amway')) ||
+            (i.item_code && i.item_code.toUpperCase().includes('AMWAY'))
+        );
+        updateStats();
+        renderItems();
+    } catch (e) {
+        console.error(e);
+        toast('Ошибка загрузки', 'error');
+    }
+}
+
+function updateStats() {
+    const totalQty = amwayItems.reduce((s, i) => s + i.actual_qty, 0);
+    const totalVal = amwayItems.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+    const noPhoto = amwayItems.filter(i => !i.image).length;
+    document.getElementById('stat-total').textContent = amwayItems.length;
+    document.getElementById('stat-qty').textContent = totalQty;
+    document.getElementById('stat-value').textContent = formatPrice(totalVal);
+    document.getElementById('stat-no-photo').textContent = noPhoto;
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderItems, 300);
+}
+
+function renderItems() {
+    const search = (document.getElementById('search').value || '').toLowerCase();
+    const sort = document.getElementById('sort-select').value;
+
+    let filtered = amwayItems.filter(i =>
+        !search ||
+        i.item_name.toLowerCase().includes(search) ||
+        i.item_code.toLowerCase().includes(search) ||
+        (i.notes && i.notes.toLowerCase().includes(search))
+    );
+
+    filtered.sort((a, b) => {
+        switch (sort) {
+            case 'price-asc': return a.valuation_rate - b.valuation_rate;
+            case 'price-desc': return b.valuation_rate - a.valuation_rate;
+            case 'qty-desc': return b.actual_qty - a.actual_qty;
+            default: return a.item_name.localeCompare(b.item_name, 'ru');
+        }
+    });
+
+    const grid = document.getElementById('amway-grid');
+    if (!filtered.length) {
+        grid.innerHTML = `<div class="col-12 empty-state">
+            <div class="icon"><i class="ti ti-building-store-off"></i></div>
+            <p>${search ? 'Ничего не найдено' : 'Нет товаров на Amway'}</p>
+        </div>`;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(item => {
+        const hasImg = !!item.image;
+        const img = hasImg
+            ? `<img src="${API.URL}${item.image}" class="product-img" alt="" loading="lazy">`
+            : `<div class="no-img"><i class="ti ti-photo"></i></div>`;
+
+        let badge = '';
+        if (item.actual_qty > 5) badge = `<div class="card-badge stock">В наличии</div>`;
+        else if (item.actual_qty > 0) badge = `<div class="card-badge few">Мало</div>`;
+
+        const seller = item.responsible ? `<div class="card-seller">${escHtml(item.responsible)}</div>` : '';
+        const canEdit = Auth.isAdmin();
+
+        return `
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="card product-card" onclick="openProduct('${item.item_code}')" style="position:relative;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
+                    <div style="position:relative;">
+                        ${img}
+                        ${badge}
+                        ${seller}
+                    </div>
+                    <div class="card-body">
+                        <div class="product-price">${formatPrice(item.valuation_rate)}</div>
+                        <div class="product-title">${escHtml(item.item_name)}</div>
+                        ${item.notes ? `<div class="product-note"><i class="ti ti-note"></i> ${escHtml(item.notes).substring(0, 60)}${item.notes.length > 60 ? '...' : ''}</div>` : ''}
+                        <div class="product-meta mt-2">
+                            <span>${item.actual_qty} шт.</span>
+                            <span>${getStatusText(item.warehouse)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ===== Product detail =====
+function openProduct(code) {
+    const item = allItems.find(i => i.item_code === code);
+    if (!item) return;
+    currentDetailCode = code;
+    const hasImg = !!item.image;
+    const canEdit = Auth.isAdmin();
+
+    document.getElementById('product-modal-content').innerHTML = `
+        <div class="modal-header">
+            <h5 class="modal-title">${escHtml(item.item_name)}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="product-detail-gallery">
+                        ${hasImg
+                            ? `<img src="${API.URL}${item.image}" onclick="openLightbox('${API.URL}${item.image}')">`
+                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:64px;color:var(--lr-text-muted);background:var(--lr-bg);${canEdit ? 'cursor:pointer;' : ''}" ${canEdit ? 'onclick="triggerPhotoUpload()"' : ''}><i class="ti ti-camera-plus"></i></div>`}
+                    </div>
+                    ${canEdit ? `
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="triggerPhotoUpload()"><i class="ti ti-camera"></i> ${hasImg ? 'Заменить' : 'Загрузить'}</button>
+                        ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
+                    </div>` : ''}
+                </div>
+                <div class="col-md-7">
+                    <div class="text-muted small mb-2">Код: ${item.item_code}</div>
+                    <div class="product-detail-price">${formatPrice(item.valuation_rate)}</div>
+                    <div class="product-detail-availability">
+                        <span class="avail-dot green"></span>
+                        <strong>${item.actual_qty} шт.</strong>
+                    </div>
+                    <table class="table table-sm mt-3 mb-0">
+                        <tr><td class="text-muted">Ответственный</td><td>${item.responsible || '—'}</td></tr>
+                        <tr><td class="text-muted">Локация</td><td>${item.locация || '—'}</td></tr>
+                        ${item.notes ? `<tr><td class="text-muted">Примечание</td><td>${escHtml(item.notes)}</td></tr>` : ''}
+                    </table>
+                    ${canEdit ? `
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-outline-warning flex-fill" onclick="openAvitoWriteOff('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}','${item.warehouse}',${item.actual_qty})"><i class="ti ti-file-minus"></i> Продано / Списать</button>
+                        <button class="btn btn-danger" onclick="confirmDeleteAvito('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+                    </div>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    new bootstrap.Modal(document.getElementById('product-modal')).show();
+}
+
+// ===== Add to Avito =====
+function openAddAvitoModal() {
+    const s = getSettings();
+    document.getElementById('aa-group').innerHTML = s.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    document.getElementById('aa-responsible').innerHTML = '<option value="">—</option>' + s.responsible.map(r => `<option value="${r}">${r}</option>`).join('');
+    document.getElementById('aa-name').value = '';
+    document.getElementById('aa-qty').value = 1;
+    document.getElementById('aa-price').value = '';
+    document.getElementById('aa-notes').value = '';
+    document.getElementById('aa-photo-preview').style.display = 'none';
+    document.getElementById('aa-photo').value = '';
+    new bootstrap.Modal(document.getElementById('add-amway-modal')).show();
+}
+
+function previewAaPhoto(input) {
+    const preview = document.getElementById('aa-photo-preview');
+    if (input.files && input.files[0]) {
+        const r = new FileReader();
+        r.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        r.readAsDataURL(input.files[0]);
+    }
+}
+
+async function submitAddAvito(e) {
+    e.preventDefault();
+    const name = document.getElementById('aa-name').value.trim();
+    const group = document.getElementById('aa-group').value;
+    const qty = document.getElementById('aa-qty').value;
+    const price = document.getElementById('aa-price').value;
+    const responsible = document.getElementById('aa-responsible').value;
+    const notes = document.getElementById('aa-notes').value.trim();
+    const photoFile = document.getElementById('aa-photo').files[0];
+    const code = generateItemCode(name);
+
+    try {
+        toast('Создание...', '');
+        const itemRes = await API.create('Item', {
+            item_code: code, item_name: name, item_group: group,
+            stock_uom: 'Nos', is_stock_item: 1,
+            custom_notes: notes,
+            'custom_locация': 'AMWAY',
+            custom_responsible: responsible || undefined
+        });
+        if (itemRes.exception) throw new Error(itemRes.exception);
+
+        if (photoFile) {
+            const upRes = await API.uploadFile(photoFile, code);
+            if (upRes.message && upRes.message.file_url) {
+                await API.update('Item', code, { image: upRes.message.file_url });
+            }
+        }
+
+        const seRes = await API.create('Stock Entry', {
+            stock_entry_type: 'Material Receipt',
+            to_warehouse: 'Основной склад - L',
+            company: 'LabRemonta',
+            remarks: `Amway: ${notes || name}`,
+            items: [{
+                item_code: code, qty: parseFloat(qty), basic_rate: parseFloat(price),
+                t_warehouse: 'Основной склад - L'
+            }]
+        });
+        if (seRes.exception) throw new Error(seRes.exception);
+        await API.update('Stock Entry', seRes.data.name, { docstatus: 1 });
+
+        toast('Добавлено на Amway!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('add-amway-modal')).hide();
+        loadData();
+    } catch (err) {
+        toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error');
+    }
+}
+
+// ===== Write-off / sold =====
+function openAvitoWriteOff(code, name, warehouse, qty) {
+    document.getElementById('awo-code').value = code;
+    document.getElementById('awo-warehouse').value = warehouse;
+    document.getElementById('awo-name').value = name;
+    document.getElementById('awo-qty').value = 1;
+    document.getElementById('awo-qty').max = qty;
+    document.getElementById('awo-reason').value = 'Продано на Amway';
+    new bootstrap.Modal(document.getElementById('writeoff-amway-modal')).show();
+}
+
+async function submitAvitoWriteOff(e) {
+    e.preventDefault();
+    const code = document.getElementById('awo-code').value;
+    const wh = document.getElementById('awo-warehouse').value;
+    const qty = parseInt(document.getElementById('awo-qty').value);
+    const reason = document.getElementById('awo-reason').value.trim();
+    try {
+        toast('Списание...', '');
+        await transferItem(code, wh, 'Списан - L', qty, reason);
+        toast('Списано!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('writeoff-amway-modal')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('product-modal'))?.hide();
+        loadData();
+    } catch (err) {
+        toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error');
+    }
+}
+
+// ===== Delete =====
+function confirmDeleteAvito(code, name) {
+    if (!Auth.isAdmin()) return;
+    if (!confirm(`Удалить "${name}"?`)) return;
+    performDelete(code);
+}
+
+async function performDelete(code) {
+    toast('Удаление...', '');
+    try {
+        await deleteItemCompletely(code);
+        await new Promise(r => setTimeout(r, 500));
+        bootstrap.Modal.getInstance(document.getElementById('product-modal'))?.hide();
+        await loadData();
+        toast('Удалено', 'success');
+    } catch (e) { toast('Ошибка удаления', 'error'); }
+}
+
+// ===== Photo =====
+function triggerPhotoUpload() { document.getElementById('detail-photo-input').click(); }
+
+async function uploadPhotoForCurrent(input) {
+    if (!input.files || !input.files[0] || !currentDetailCode) return;
+    try {
+        toast('Загрузка...', '');
+        const up = await API.uploadFile(input.files[0], currentDetailCode);
+        if (up.message && up.message.file_url) {
+            await API.update('Item', currentDetailCode, { image: up.message.file_url });
+            toast('Фото загружено', 'success');
+            await loadData();
+            openProduct(currentDetailCode);
+        }
+    } catch (e) { toast('Ошибка', 'error'); }
+    input.value = '';
+}
+
+async function deleteCurrentPhoto() {
+    if (!currentDetailCode || !confirm('Удалить фото?')) return;
+    try {
+        await API.update('Item', currentDetailCode, { image: '' });
+        toast('Фото удалено', 'success');
+        await loadData();
+        openProduct(currentDetailCode);
+    } catch (e) { toast('Ошибка', 'error'); }
+}
+
+function openLightbox(url) {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('active');
+}
+
+// ===== Export =====
+function exportAvitoCSV() {
+    if (!amwayItems.length) { toast('Нечего экспортировать', 'error'); return; }
+    const hdr = ['Название', 'Код', 'Кол-во', 'Цена', 'Сумма', 'Ответственный', 'Примечание'];
+    const rows = amwayItems.map(i => [
+        i.item_name, i.item_code, i.actual_qty, i.valuation_rate,
+        i.actual_qty * i.valuation_rate, i.responsible || '', i.notes || ''
+    ]);
+    const csv = [hdr, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `amway_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast('Экспортировано', 'success');
+}
+</script>
+</body>
+</html>

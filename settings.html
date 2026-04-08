@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Настройки — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+    .settings-list-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: #f7f8fa;
+        border: 1px solid #ebedf0;
+        border-radius: 10px;
+        margin-bottom: 6px;
+    }
+    .settings-list-item .item-text { flex: 1; font-weight: 500; }
+    .dict-item {
+        background: #f7f8fa;
+        border: 1px solid #ebedf0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+    }
+    .dict-item-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+    .dict-item-header .name {
+        font-weight: 600;
+        font-size: 15px;
+        flex: 1;
+    }
+    .keyword-chip {
+        display: inline-block;
+        background: #ffffff;
+        border: 1px solid #ebedf0;
+        color: #4a5568;
+        padding: 3px 9px;
+        border-radius: 8px;
+        margin: 2px;
+        font-size: 11px;
+        font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2 class="mb-0"><i class="ti ti-settings me-2" style="color:#00c853;"></i>Настройки</h2>
+                    <div class="text-muted">Управление справочниками и пользователями</div>
+                </div>
+                <button class="btn btn-outline-danger btn-sm" onclick="resetAll()">
+                    <i class="ti ti-refresh"></i> Сбросить всё к дефолтам
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-users"><i class="ti ti-users me-1"></i>Пользователи</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-locations"><i class="ti ti-map-pin me-1"></i>Локации</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-groups"><i class="ti ti-category me-1"></i>Группы товаров</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-parttypes"><i class="ti ti-tool me-1"></i>Типы запчастей</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-brands"><i class="ti ti-building me-1"></i>Марки</a></li>
+                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-appliances"><i class="ti ti-device-desktop me-1"></i>Типы техники</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- USERS -->
+                        <div class="tab-pane fade show active" id="tab-users">
+                            <div class="alert alert-info" style="font-size:13px;">
+                                <i class="ti ti-info-circle me-1"></i>
+                                Пользователи с ролью "Мастер" появляются в списке мастеров и могут иметь свой подотчёт.
+                                Поле "Фамилия" должно совпадать с полем "Ответственный" у товаров.
+                            </div>
+                            <button class="btn btn-yellow mb-3" onclick="addUser()"><i class="ti ti-plus"></i> Добавить пользователя</button>
+                            <div class="table-responsive">
+                                <table class="table table-vcenter">
+                                    <thead>
+                                        <tr><th>Логин</th><th>Пароль</th><th>Роль</th><th>Фамилия</th><th>Ответственный (для товаров)</th><th style="width:100px;"></th></tr>
+                                    </thead>
+                                    <tbody id="users-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- LOCATIONS -->
+                        <div class="tab-pane fade" id="tab-locations">
+                            <div class="text-muted mb-3" style="font-size:13px;">Физические локации склада или подразделения</div>
+                            <div class="row g-2 mb-3">
+                                <div class="col"><input type="text" class="form-control" id="new-location" placeholder="Название локации..." onkeypress="if(event.key==='Enter'){event.preventDefault();addListItem('locations','new-location');}"></div>
+                                <div class="col-auto"><button class="btn btn-yellow" onclick="addListItem('locations','new-location')"><i class="ti ti-plus"></i> Добавить</button></div>
+                            </div>
+                            <div id="locations-list"></div>
+                        </div>
+
+                        <!-- GROUPS -->
+                        <div class="tab-pane fade" id="tab-groups">
+                            <div class="text-muted mb-3" style="font-size:13px;">Группы товаров в ERPNext (должны существовать в системе!)</div>
+                            <div class="row g-2 mb-3">
+                                <div class="col"><input type="text" class="form-control" id="new-group" placeholder="Название группы..." onkeypress="if(event.key==='Enter'){event.preventDefault();addListItem('groups','new-group');}"></div>
+                                <div class="col-auto"><button class="btn btn-yellow" onclick="addListItem('groups','new-group')"><i class="ti ti-plus"></i> Добавить</button></div>
+                            </div>
+                            <div id="groups-list"></div>
+                        </div>
+
+                        <!-- RESPONSIBLE (from settings.responsible list) -->
+                        <!-- deprecated — responsibles now come from users list -->
+
+                        <!-- PART TYPES -->
+                        <div class="tab-pane fade" id="tab-parttypes">
+                            <div class="text-muted mb-3" style="font-size:13px;">
+                                Типы запчастей и ключевые слова для автоопределения из названия товара.
+                                <strong>Ключевые слова через запятую.</strong>
+                            </div>
+                            <button class="btn btn-yellow mb-3" onclick="addDictEntry('parttypes')"><i class="ti ti-plus"></i> Добавить тип</button>
+                            <div id="parttypes-list"></div>
+                        </div>
+
+                        <!-- BRANDS -->
+                        <div class="tab-pane fade" id="tab-brands">
+                            <div class="text-muted mb-3" style="font-size:13px;">Бренды и ключевые слова для автоопределения.</div>
+                            <button class="btn btn-yellow mb-3" onclick="addDictEntry('brands')"><i class="ti ti-plus"></i> Добавить бренд</button>
+                            <div id="brands-list"></div>
+                        </div>
+
+                        <!-- APPLIANCES -->
+                        <div class="tab-pane fade" id="tab-appliances">
+                            <div class="text-muted mb-3" style="font-size:13px;">Типы техники и ключевые слова.</div>
+                            <button class="btn btn-yellow mb-3" onclick="addDictEntry('appliances')"><i class="ti ti-plus"></i> Добавить тип техники</button>
+                            <div id="appliances-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/app.js"></script>
+<script>
+Auth.require('admin');
+initNavbar('settings');
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderUsers();
+    renderList('locations');
+    renderList('groups');
+    renderDict('parttypes');
+    renderDict('brands');
+    renderDict('appliances');
+});
+
+// ===== USERS =====
+function renderUsers() {
+    const users = getUsers();
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = users.map((u, idx) => `
+        <tr>
+            <td><input type="text" class="form-control form-control-sm" value="${escHtml(u.login)}" onchange="updateUser(${idx}, 'login', this.value)"></td>
+            <td><input type="text" class="form-control form-control-sm" value="${escHtml(u.password)}" onchange="updateUser(${idx}, 'password', this.value)"></td>
+            <td>
+                <select class="form-select form-select-sm" onchange="updateUser(${idx}, 'role', this.value)">
+                    <option value="admin" ${u.role==='admin'?'selected':''}>Админ</option>
+                    <option value="master" ${u.role==='master'?'selected':''}>Мастер</option>
+                </select>
+            </td>
+            <td><input type="text" class="form-control form-control-sm" value="${escHtml(u.name||'')}" onchange="updateUser(${idx}, 'name', this.value)"></td>
+            <td><input type="text" class="form-control form-control-sm" value="${escHtml(u.responsible||'')}" placeholder="Фамилия в товарах" onchange="updateUser(${idx}, 'responsible', this.value)"></td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser(${idx})" title="Удалить">
+                    <i class="ti ti-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function addUser() {
+    const users = getUsers();
+    users.push({ login: 'newuser', password: '1234', role: 'master', name: 'Новый мастер', responsible: 'Новый мастер' });
+    saveUsers(users);
+    renderUsers();
+    toast('Добавлено', 'success');
+}
+
+function updateUser(idx, field, value) {
+    const users = getUsers();
+    if (!users[idx]) return;
+    users[idx][field] = value;
+    saveUsers(users);
+    toast('Сохранено', 'success');
+}
+
+function deleteUser(idx) {
+    const users = getUsers();
+    if (users[idx].login === Auth.user.login) { toast('Нельзя удалить себя', 'error'); return; }
+    if (!confirm(`Удалить пользователя "${users[idx].name}"?`)) return;
+    users.splice(idx, 1);
+    saveUsers(users);
+    renderUsers();
+    toast('Удалён', 'success');
+}
+
+// ===== LIST SETTINGS (locations, groups) =====
+function renderList(key) {
+    const s = getSettings();
+    const list = s[key] || [];
+    const container = document.getElementById(`${key}-list`);
+    if (!list.length) {
+        container.innerHTML = '<div class="text-muted text-center py-3">Список пуст</div>';
+        return;
+    }
+    container.innerHTML = list.map((item, idx) => `
+        <div class="settings-list-item">
+            <i class="ti ti-grip-vertical text-muted"></i>
+            <input type="text" class="form-control form-control-sm" value="${escHtml(item)}" onchange="updateListItem('${key}', ${idx}, this.value)">
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteListItem('${key}', ${idx})"><i class="ti ti-trash"></i></button>
+        </div>
+    `).join('');
+}
+
+function addListItem(key, inputId) {
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if (!val) return;
+    const s = getSettings();
+    s[key] = s[key] || [];
+    if (s[key].includes(val)) { toast('Уже существует', 'error'); return; }
+    s[key].push(val);
+    saveSettings(s);
+    input.value = '';
+    renderList(key);
+    toast('Добавлено', 'success');
+}
+
+function updateListItem(key, idx, val) {
+    const s = getSettings();
+    if (!s[key] || !s[key][idx]) return;
+    s[key][idx] = val.trim();
+    saveSettings(s);
+    toast('Сохранено', 'success');
+}
+
+function deleteListItem(key, idx) {
+    const s = getSettings();
+    if (!confirm(`Удалить "${s[key][idx]}"?`)) return;
+    s[key].splice(idx, 1);
+    saveSettings(s);
+    renderList(key);
+    toast('Удалено', 'success');
+}
+
+// ===== DICTIONARIES (part types, brands, appliances) =====
+const DICT_KEYS = {
+    parttypes: { getter: getPartTypes, storageKey: 'lr_dict_parttypes', defaults: DEFAULT_PART_TYPES },
+    brands:    { getter: getBrands,    storageKey: 'lr_dict_brands',    defaults: DEFAULT_BRANDS },
+    appliances:{ getter: getAppliances,storageKey: 'lr_dict_appliances',defaults: DEFAULT_APPLIANCES }
+};
+
+function renderDict(type) {
+    const cfg = DICT_KEYS[type];
+    const dict = cfg.getter();
+    const container = document.getElementById(`${type}-list`);
+    const entries = Object.entries(dict);
+    if (!entries.length) {
+        container.innerHTML = '<div class="text-muted text-center py-3">Пусто</div>';
+        return;
+    }
+    container.innerHTML = entries.map(([name, keywords]) => `
+        <div class="dict-item">
+            <div class="dict-item-header">
+                <input type="text" class="form-control form-control-sm name" value="${escHtml(name)}" onchange="renameDictEntry('${type}', '${escHtml(name).replace(/'/g,"\\'")}', this.value)" style="flex:1;font-weight:600;">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteDictEntry('${type}', '${escHtml(name).replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+            </div>
+            <textarea class="form-control form-control-sm" rows="2" placeholder="ключевые слова через запятую" onchange="updateDictKeywords('${type}', '${escHtml(name).replace(/'/g,"\\'")}', this.value)">${keywords.join(', ')}</textarea>
+            <div class="mt-2">${keywords.map(k => `<span class="keyword-chip">${escHtml(k)}</span>`).join('')}</div>
+        </div>
+    `).join('');
+}
+
+function addDictEntry(type) {
+    const name = prompt('Название:');
+    if (!name || !name.trim()) return;
+    const cfg = DICT_KEYS[type];
+    const dict = cfg.getter();
+    if (dict[name.trim()]) { toast('Уже существует', 'error'); return; }
+    dict[name.trim()] = [];
+    saveDict(cfg.storageKey, dict);
+    renderDict(type);
+    toast('Добавлено', 'success');
+}
+
+function renameDictEntry(type, oldName, newName) {
+    newName = newName.trim();
+    if (!newName || oldName === newName) return;
+    const cfg = DICT_KEYS[type];
+    const dict = cfg.getter();
+    if (dict[newName]) { toast('Такое имя уже есть', 'error'); renderDict(type); return; }
+    dict[newName] = dict[oldName];
+    delete dict[oldName];
+    saveDict(cfg.storageKey, dict);
+    renderDict(type);
+    toast('Переименовано', 'success');
+}
+
+function updateDictKeywords(type, name, keywordsStr) {
+    const cfg = DICT_KEYS[type];
+    const dict = cfg.getter();
+    dict[name] = keywordsStr.split(',').map(s => s.trim().toLowerCase()).filter(s => s);
+    saveDict(cfg.storageKey, dict);
+    renderDict(type);
+    toast('Сохранено', 'success');
+}
+
+function deleteDictEntry(type, name) {
+    if (!confirm(`Удалить "${name}"?`)) return;
+    const cfg = DICT_KEYS[type];
+    const dict = cfg.getter();
+    delete dict[name];
+    saveDict(cfg.storageKey, dict);
+    renderDict(type);
+    toast('Удалено', 'success');
+}
+
+// ===== RESET =====
+function resetAll() {
+    if (!confirm('Сбросить ВСЕ настройки к дефолтам?\n\nПользователи, локации, группы, словари — всё вернётся в исходное состояние.')) return;
+    localStorage.removeItem('lr_users');
+    localStorage.removeItem('lr_settings');
+    localStorage.removeItem('lr_dict_parttypes');
+    localStorage.removeItem('lr_dict_brands');
+    localStorage.removeItem('lr_dict_appliances');
+    toast('Всё сброшено', 'success');
+    setTimeout(() => location.reload(), 800);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+// ========================================
+// Лаборатория Ремонта — Shared navigation
+// Рендерит шапку с учётом роли пользователя
+// ========================================
+
+function renderNavbar(activePage = '') {
+    const user = Auth.user;
+    if (!user) return '';
+
+    const isAdmin = user.role === 'admin';
+    const initial = user.name.charAt(0).toUpperCase();
+
+    // Menu items based on role
+    const menuItems = [];
+    menuItems.push({ id: 'catalog', href: 'index.html', label: 'Склад', icon: 'ti-package' });
+    menuItems.push({ id: 'avito', href: 'avito.html', label: 'Авито', icon: 'ti-shopping-cart' });
+
+    if (isAdmin) {
+        menuItems.push({ id: 'masters', href: 'masters.html', label: 'Мастера', icon: 'ti-users' });
+        menuItems.push({ id: 'vykup', href: 'vykup.html', label: 'Выкуп склад', icon: 'ti-cash' });
+        menuItems.push({ id: 'amway', href: 'amway.html', label: 'Amway', icon: 'ti-building-store' });
+        menuItems.push({ id: 'settings', href: 'settings.html', label: 'Настройки', icon: 'ti-settings' });
+    } else {
+        menuItems.push({ id: 'my', href: 'my.html', label: 'Мой подотчёт', icon: 'ti-briefcase' });
+    }
+
+    const menuHtml = menuItems.map(m => `
+        <a class="nav-link ${activePage === m.id ? 'active' : ''}" href="${m.href}">
+            <i class="ti ${m.icon} me-1"></i>${m.label}
+        </a>
+    `).join('');
+
+    const addButton = isAdmin
+        ? `<button class="btn btn-yellow" onclick="openAddModal && openAddModal()">
+               <i class="ti ti-plus"></i> Добавить товар
+           </button>`
+        : '';
+
+    return `
+    <header class="navbar navbar-expand-md lr-navbar d-print-none">
+        <div class="container-xl">
+            <a href="index.html" class="navbar-brand lr-logo">
+                <svg class="lr-logo-tree" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#00c853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Trunk -->
+                    <line x1="20" y1="38" x2="20" y2="14"/>
+                    <!-- Main branches -->
+                    <line x1="20" y1="22" x2="11" y2="16"/>
+                    <line x1="20" y1="22" x2="29" y2="16"/>
+                    <line x1="20" y1="16" x2="14" y2="10"/>
+                    <line x1="20" y1="16" x2="26" y2="10"/>
+                    <!-- Circuit nodes (leaves) -->
+                    <circle cx="11" cy="16" r="2" fill="#00c853" stroke="none"/>
+                    <circle cx="29" cy="16" r="2" fill="#00c853" stroke="none"/>
+                    <circle cx="14" cy="10" r="2" fill="#00c853" stroke="none"/>
+                    <circle cx="26" cy="10" r="2" fill="#00c853" stroke="none"/>
+                    <circle cx="20" cy="6" r="2.5" fill="#00c853" stroke="none"/>
+                    <line x1="20" y1="14" x2="20" y2="8.5"/>
+                </svg>
+                <div class="lr-logo-text">
+                    <span class="lr-logo-line1">ЛАБОРАТОРИЯ</span>
+                    <span class="lr-logo-line2">РЕМОНТА</span>
+                </div>
+            </a>
+
+            <div class="navbar-nav flex-row d-none d-md-flex ms-4">
+                ${menuHtml}
+            </div>
+
+            <div class="navbar-nav flex-row order-md-last ms-auto">
+                <div class="nav-item d-none d-md-flex me-3">${addButton}</div>
+                <div class="nav-item dropdown">
+                    <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                        <span class="avatar avatar-sm" style="background:${isAdmin ? '#00c853' : '#f1f3f5'};color:${isAdmin ? '#fff' : '#001a34'};">${initial}</span>
+                        <div class="d-none d-xl-block ps-2">
+                            <div>${user.name}</div>
+                            <div class="mt-1 small text-muted">${isAdmin ? 'Админ' : 'Мастер'}</div>
+                        </div>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                        ${isAdmin ? `
+                            <a href="#" class="dropdown-item" onclick="openWriteOffModal && openWriteOffModal()"><i class="ti ti-file-minus me-2"></i>Списать товар</a>
+                            <a href="#" class="dropdown-item" onclick="openHistoryModal && openHistoryModal()"><i class="ti ti-history me-2"></i>История списаний</a>
+                            <div class="dropdown-divider"></div>
+                        ` : ''}
+                        <a href="#" class="dropdown-item" onclick="location.reload()"><i class="ti ti-refresh me-2"></i>Обновить</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" onclick="Auth.logout(); return false;"><i class="ti ti-logout me-2"></i>Выйти</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    `;
+}
+
+// Auto-insert navbar at page load
+function initNavbar(activePage = '') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('navbar-slot');
+        if (container) container.innerHTML = renderNavbar(activePage);
+    });
+}

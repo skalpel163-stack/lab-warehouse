@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мой подотчёт — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+    .admin-banner {
+        background: #e6f9ed;
+        color: #009940;
+        padding: 12px 16px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 400;
+    }
+    .admin-banner strong { font-weight: 700; color: #009940; }
+    .admin-banner .flex-fill { color: #4a5568; }
+    .admin-banner .btn {
+        background: #00c853;
+        color: #fff;
+        border: none;
+    }
+    .admin-banner .btn:hover {
+        background: #00b848;
+        color: #fff;
+    }
+    .drag-handle { width: 30px; }
+    .drag-handle:hover { color: var(--lr-text) !important; }
+    .drag-handle:active { cursor: grabbing !important; }
+    .sortable-ghost {
+        opacity: 0.35;
+        background: var(--lr-bg-elevated) !important;
+    }
+    .sortable-chosen {
+        background: var(--lr-surface) !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+
+            <!-- Admin banner (shown only for admin viewing a master) -->
+            <div id="admin-banner" class="admin-banner" style="display:none;">
+                <i class="ti ti-shield-check" style="font-size:20px;"></i>
+                <div class="flex-fill">
+                    <strong>Режим администратора.</strong>
+                    Вы просматриваете подотчёт мастера <strong id="banner-master"></strong>. Доступны все операции редактирования.
+                </div>
+                <a href="masters.html" class="btn btn-sm"><i class="ti ti-arrow-left"></i> К списку</a>
+            </div>
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="ti ti-briefcase me-2" style="color:#00c853;"></i>
+                        <span id="page-title">Мой подотчёт</span>
+                    </h2>
+                    <div class="text-muted" id="page-sub">Запчасти, которые сейчас у меня</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-yellow admin-only" style="display:none;" onclick="openAddDirectModal()">
+                        <i class="ti ti-plus"></i> Добавить запчасть
+                    </button>
+                    <button class="btn btn-outline-primary admin-only" style="display:none;" onclick="openGiveOutModal()">
+                        <i class="ti ti-arrow-right"></i> Выдать со склада
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportMyCSV()">
+                        <i class="ti ti-download"></i> Экспорт
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-strip mb-3">
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-total">0</span>
+                    <span class="stats-strip-label">позиций</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-qty">0</span>
+                    <span class="stats-strip-label">штук</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item stats-strip-total">
+                    <span class="stats-strip-value" id="stat-value">0 ₽</span>
+                    <span class="stats-strip-label">сумма</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-writeoff">0</span>
+                    <span class="stats-strip-label">списано</span>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="card mb-3">
+                <div class="card-body p-2">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <input type="text" class="form-control" id="search" placeholder="Поиск по названию, артикулу..." oninput="debounceSearch()">
+                        </div>
+                        <div class="col-auto">
+                            <select class="form-select" id="sort-select" onchange="renderItems()">
+                                <option value="name">По названию</option>
+                                <option value="price-asc">Сначала дешёвые</option>
+                                <option value="price-desc">Сначала дорогие</option>
+                                <option value="qty-desc">По количеству</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items table -->
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-vcenter table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width:30px;"></th>
+                                <th style="width:60px;">Фото</th>
+                                <th>Название</th>
+                                <th>Артикул</th>
+                                <th style="width:80px;">Кол-во</th>
+                                <th style="width:120px;">Цена</th>
+                                <th style="width:120px;">Сумма</th>
+                                <th style="width:140px;">Локация</th>
+                                <th style="width:220px;" class="text-end">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-tbody">
+                            <tr><td colspan="8" class="text-center text-muted py-4">Загрузка...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal modal-blur fade" id="product-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" id="product-modal-content"></div>
+    </div>
+</div>
+
+<!-- Quick write-off modal -->
+<div class="modal modal-blur fade" id="quick-writeoff-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Списать запчасть</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitQuickWriteOff(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="qwo-code">
+                    <input type="hidden" id="qwo-warehouse">
+                    <div class="mb-3">
+                        <label class="form-label">Товар</label>
+                        <input type="text" class="form-control" id="qwo-name" readonly style="background:#f8f9fa;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Доступно</label>
+                        <input type="text" class="form-control" id="qwo-available" readonly style="background:#f8f9fa;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Количество</label>
+                        <input type="number" class="form-control" id="qwo-qty" required value="1" min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Номер заказа / Причина</label>
+                        <input type="text" class="form-control" id="qwo-order" required placeholder="#12345">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="qwo-comment" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger"><i class="ti ti-file-minus"></i> Списать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Admin: Give out parts modal -->
+<div class="modal modal-blur fade" id="giveout-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Выдать запчасть мастеру <span id="giveout-master"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitGiveOut(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label required">Товар со склада</label>
+                        <select class="form-select" id="go-item" required onchange="updateGoAvail()">
+                            <option value="">-- Выберите --</option>
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">На складе</label>
+                            <input type="text" class="form-control" id="go-avail" readonly style="background:#f8f9fa;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Выдать кол-во</label>
+                            <input type="number" class="form-control" id="go-qty" required value="1" min="1">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="go-comment" rows="2" placeholder="Для заказа #..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-yellow"><i class="ti ti-arrow-right"></i> Выдать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightbox" onclick="if(event.target===this)this.classList.remove('active')">
+    <button class="lightbox-close" onclick="document.getElementById('lightbox').classList.remove('active')">&times;</button>
+    <img id="lightbox-img" src="">
+</div>
+
+<!-- Admin: Add part directly to this master's подотчёт -->
+<div class="modal modal-blur fade" id="add-direct-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить запчасть → <span id="add-direct-master"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitAddDirect(event)">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label required">Название</label>
+                                <input type="text" class="form-control" id="ad-name" required placeholder="Помпа Ulka EP5 48w">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label required">Кол-во</label>
+                                <input type="number" class="form-control" id="ad-qty" required value="1" min="1">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label required">Цена, ₽</label>
+                                <input type="number" class="form-control" id="ad-price" required placeholder="1500">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Группа</label>
+                                <select class="form-select" id="ad-group"></select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Локация</label>
+                                <select class="form-select" id="ad-location"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Примечание</label>
+                                <textarea class="form-control" id="ad-notes" rows="2" placeholder="Доп. информация..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Источник</label>
+                                <select class="form-select" id="ad-source">
+                                    <option value="Купленная">Купленная</option>
+                                    <option value="Бесплатная">Бесплатная</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Фото</label>
+                        <div style="border:2px dashed #ebedf0;border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:#f7f8fa;" onclick="document.getElementById('ad-photo').click()">
+                            <i class="ti ti-camera-plus" style="font-size:32px;color:#8a94a6;"></i>
+                            <p class="text-muted mt-1 mb-0" style="font-size:12px;">Нажмите для загрузки</p>
+                            <img id="ad-photo-preview" style="max-width:100%;max-height:150px;display:none;border-radius:8px;margin-top:8px;">
+                        </div>
+                        <input type="file" id="ad-photo" accept="image/*" style="display:none" onchange="previewAdPhoto(this)">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-yellow"><i class="ti ti-plus"></i> Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden file input for photo -->
+<input type="file" id="detail-photo-input" accept="image/*" style="display:none" onchange="uploadPhotoForCurrent(this)">
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/api.js"></script>
+<script>
+// ===== Auth =====
+const currentUser = Auth.require();
+
+// Admin can view any master via ?master=NAME, master sees only their own
+const urlParams = new URLSearchParams(location.search);
+const viewingMaster = Auth.isAdmin() ? urlParams.get('master') : currentUser.responsible;
+
+if (Auth.isAdmin() && !viewingMaster) {
+    alert('Выберите мастера');
+    location.href = 'masters.html';
+}
+
+// Configure page based on role
+if (Auth.isAdmin() && viewingMaster) {
+    document.getElementById('page-title').textContent = `Подотчёт: ${viewingMaster}`;
+    document.getElementById('page-sub').textContent = 'Запчасти этого мастера';
+    document.getElementById('admin-banner').style.display = 'flex';
+    document.getElementById('banner-master').textContent = viewingMaster;
+    document.title = `${viewingMaster} — подотчёт`;
+    // Show admin-only buttons
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+}
+
+initNavbar(Auth.isAdmin() ? 'masters' : 'my');
+
+let allItems = [];
+let myItems = [];
+let writeOffCount = 0;
+let searchTimer = null;
+let currentDetailCode = null;
+
+document.addEventListener('DOMContentLoaded', loadData);
+
+async function loadData() {
+    try {
+        allItems = await fetchWarehouseData();
+        myItems = allItems.filter(i => i.warehouse.includes('Подотчёт') && i.responsible === viewingMaster);
+        updateStats();
+        renderItems();
+    } catch (e) {
+        console.error(e);
+        toast('Ошибка загрузки', 'error');
+    }
+}
+
+function updateStats() {
+    const totalQty = myItems.reduce((s, i) => s + i.actual_qty, 0);
+    const totalVal = myItems.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+    document.getElementById('stat-total').textContent = myItems.length;
+    document.getElementById('stat-qty').textContent = totalQty;
+    document.getElementById('stat-value').textContent = formatPrice(totalVal);
+    document.getElementById('stat-writeoff').textContent = writeOffCount;
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderItems, 300);
+}
+
+function renderItems() {
+    const search = (document.getElementById('search').value || '').toLowerCase();
+    const sort = document.getElementById('sort-select').value;
+
+    let filtered = myItems.filter(i =>
+        !search ||
+        i.item_name.toLowerCase().includes(search) ||
+        i.item_code.toLowerCase().includes(search) ||
+        (i.article && i.article.toLowerCase().includes(search))
+    );
+
+    // Use saved drag order if sorting by name (default), otherwise use selected sort
+    if (sort === 'name' && !search) {
+        filtered = applySavedOrder(filtered);
+    } else {
+        filtered.sort((a, b) => {
+            switch (sort) {
+                case 'price-asc': return a.valuation_rate - b.valuation_rate;
+                case 'price-desc': return b.valuation_rate - a.valuation_rate;
+                case 'qty-desc': return b.actual_qty - a.actual_qty;
+                default: return a.item_name.localeCompare(b.item_name, 'ru');
+            }
+        });
+    }
+
+    const tbody = document.getElementById('items-tbody');
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5">
+            <i class="ti ti-package-off" style="font-size:48px;opacity:0.3;"></i>
+            <div class="mt-2">${search ? 'Ничего не найдено' : 'Подотчёт пуст'}</div>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+        const img = item.image
+            ? `<img src="${API.URL}${item.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="event.stopPropagation();openLightbox('${API.URL}${item.image}')">`
+            : `<div style="width:48px;height:48px;background:#f1f3f5;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#adb5bd;"><i class="ti ti-photo"></i></div>`;
+
+        // Admin-only buttons: edit, move to general stock, delete
+        const adminBtns = Auth.isAdmin() ? `
+            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();openProduct('${item.item_code}')" title="Редактировать">
+                <i class="ti ti-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation();returnToStock('${item.item_code}','${item.warehouse}', ${item.actual_qty})" title="Вернуть на склад">
+                <i class="ti ti-arrow-back"></i>
+            </button>
+        ` : '';
+
+        return `
+            <tr style="cursor:pointer;" data-code="${item.item_code}" onclick="openProduct('${item.item_code}')" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
+                <td class="drag-handle" onclick="event.stopPropagation()" style="cursor:grab;color:var(--lr-text-muted);text-align:center;"><i class="ti ti-grip-vertical"></i></td>
+                <td onclick="event.stopPropagation()">${img}</td>
+                <td>
+                    <div style="font-weight:500;">${escHtml(item.item_name)}</div>
+                    ${item.notes ? `<div class="small" style="color:#f59e0b;"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0, 50)}${item.notes.length > 50 ? '...' : ''}</div>` : `<div class="small text-muted">${item.item_code}</div>`}
+                </td>
+                <td><small class="text-muted">${item.article || '—'}</small></td>
+                <td><span class="badge bg-green-lt">${item.actual_qty} шт.</span></td>
+                <td>${formatPrice(item.valuation_rate)}</td>
+                <td><strong>${formatPrice(item.actual_qty * item.valuation_rate)}</strong></td>
+                <td><small>${item.locация || '—'}</small></td>
+                <td class="text-end" onclick="event.stopPropagation()">
+                    ${adminBtns}
+                    <button class="btn btn-sm btn-outline-danger" onclick="openQuickWriteOff('${item.item_code}', '${escHtml(item.item_name).replace(/'/g,"\\'")}', '${item.warehouse}', ${item.actual_qty}, ${item.valuation_rate})">
+                        <i class="ti ti-file-minus"></i> Списать
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Init drag & drop
+    initSortable();
+}
+
+// ===== Drag & Drop =====
+let sortableInstance = null;
+
+function initSortable() {
+    const tbody = document.getElementById('items-tbody');
+    if (sortableInstance) sortableInstance.destroy();
+    sortableInstance = new Sortable(tbody, {
+        handle: '.drag-handle',
+        animation: 200,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        onEnd: function() {
+            // Save order to localStorage
+            const rows = tbody.querySelectorAll('tr[data-code]');
+            const order = [...rows].map(r => r.dataset.code);
+            saveSortOrder(order);
+        }
+    });
+}
+
+function getSortOrder() {
+    try {
+        const key = `lr_sort_${viewingMaster}`;
+        const saved = localStorage.getItem(key);
+        return saved ? JSON.parse(saved) : null;
+    } catch (e) { return null; }
+}
+
+function saveSortOrder(order) {
+    const key = `lr_sort_${viewingMaster}`;
+    localStorage.setItem(key, JSON.stringify(order));
+}
+
+// Apply saved order to myItems before rendering
+function applySavedOrder(items) {
+    const order = getSortOrder();
+    if (!order || !order.length) return items;
+    const map = new Map();
+    items.forEach(i => map.set(i.item_code, i));
+    const sorted = [];
+    // First — items in saved order
+    order.forEach(code => {
+        if (map.has(code)) {
+            sorted.push(map.get(code));
+            map.delete(code);
+        }
+    });
+    // Then — new items not in saved order
+    map.forEach(i => sorted.push(i));
+    return sorted;
+}
+
+// ===== Quick write-off =====
+function openQuickWriteOff(code, name, warehouse, qty, price) {
+    document.getElementById('qwo-code').value = code;
+    document.getElementById('qwo-warehouse').value = warehouse;
+    document.getElementById('qwo-name').value = name;
+    document.getElementById('qwo-available').value = `${qty} шт. (${formatPrice(price)} за шт.)`;
+    document.getElementById('qwo-qty').value = 1;
+    document.getElementById('qwo-qty').max = qty;
+    document.getElementById('qwo-order').value = '';
+    document.getElementById('qwo-comment').value = '';
+    new bootstrap.Modal(document.getElementById('quick-writeoff-modal')).show();
+}
+
+async function submitQuickWriteOff(e) {
+    e.preventDefault();
+    const code = document.getElementById('qwo-code').value;
+    const wh = document.getElementById('qwo-warehouse').value;
+    const qty = parseInt(document.getElementById('qwo-qty').value);
+    const order = document.getElementById('qwo-order').value.trim();
+    const comment = document.getElementById('qwo-comment').value.trim();
+    const remarks = `Заказ: ${order}${comment ? ' | ' + comment : ''} | Мастер: ${viewingMaster}`;
+    try {
+        toast('Списание...', '');
+        await transferItem(code, wh, 'Списан - L', qty, remarks);
+        toast('Списано!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('quick-writeoff-modal')).hide();
+        loadData();
+    } catch (err) {
+        toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error');
+    }
+}
+
+// ===== Admin: Return item to general stock =====
+async function returnToStock(code, warehouse, qty) {
+    if (!confirm('Вернуть этот товар на основной склад?')) return;
+    try {
+        toast('Возврат...', '');
+        await transferItem(code, warehouse, 'Основной склад - L', qty, `Возврат с подотчёта ${viewingMaster}`);
+        toast('Возвращено на склад', 'success');
+        loadData();
+    } catch (e) { toast('Ошибка: ' + (e.message || '').substring(0, 60), 'error'); }
+}
+
+// ===== Admin: Give out parts to master =====
+function openGiveOutModal() {
+    const sel = document.getElementById('go-item');
+    // Only show items from main warehouse
+    const stockItems = allItems.filter(i => i.warehouse.includes('Основной') && i.actual_qty > 0);
+    sel.innerHTML = '<option value="">-- Выберите товар --</option>' +
+        stockItems.map(i => `<option value="${i.item_code}" data-qty="${i.actual_qty}" data-warehouse="${i.warehouse}">${escHtml(i.item_name)} (${i.actual_qty} шт.)</option>`).join('');
+    document.getElementById('go-avail').value = '';
+    document.getElementById('go-qty').value = 1;
+    document.getElementById('go-comment').value = '';
+    document.getElementById('giveout-master').textContent = viewingMaster;
+    new bootstrap.Modal(document.getElementById('giveout-modal')).show();
+}
+
+function updateGoAvail() {
+    const opt = document.getElementById('go-item').selectedOptions[0];
+    if (opt && opt.value) {
+        document.getElementById('go-avail').value = `${opt.dataset.qty} шт.`;
+        document.getElementById('go-qty').max = opt.dataset.qty;
+    }
+}
+
+async function submitGiveOut(e) {
+    e.preventDefault();
+    const opt = document.getElementById('go-item').selectedOptions[0];
+    const code = document.getElementById('go-item').value;
+    const qty = parseInt(document.getElementById('go-qty').value);
+    const comment = document.getElementById('go-comment').value.trim();
+    try {
+        toast('Выдача...', '');
+        // 1) Transfer to Подотчёт
+        await transferItem(code, opt.dataset.warehouse, 'Подотчёт - L', qty, `Выдача мастеру ${viewingMaster}. ${comment}`);
+        // 2) Update item's responsible field
+        await API.update('Item', code, { custom_responsible: viewingMaster });
+        toast('Выдано мастеру ' + viewingMaster, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('giveout-modal')).hide();
+        loadData();
+    } catch (err) { toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error'); }
+}
+
+// ===== Export CSV =====
+function exportMyCSV() {
+    if (!myItems.length) { toast('Нечего экспортировать', 'error'); return; }
+    const hdr = ['Название', 'Код', 'Артикул', 'Кол-во', 'Цена', 'Сумма', 'Локация', 'Место'];
+    const rows = myItems.map(i => [
+        i.item_name, i.item_code, i.article || '', i.actual_qty, i.valuation_rate,
+        i.actual_qty * i.valuation_rate, i.locация || '', i.location || ''
+    ]);
+    const csv = [hdr, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `подотчёт_${viewingMaster}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast('Экспортировано', 'success');
+}
+
+// ===== Product detail modal =====
+function openProduct(code) {
+    const item = allItems.find(i => i.item_code === code);
+    if (!item) return;
+    currentDetailCode = code;
+    const hasImg = !!item.image;
+    const canEdit = Auth.isAdmin();
+
+    const adminActions = canEdit ? `
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-outline-secondary flex-fill" onclick="openEditMeta('${item.item_code}')"><i class="ti ti-edit"></i> Доп. поля</button>
+            <button class="btn btn-warning flex-fill" onclick="returnToStock('${item.item_code}','${item.warehouse}',${item.actual_qty})"><i class="ti ti-arrow-back"></i> На склад</button>
+            <button class="btn btn-danger" onclick="confirmDelete('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+        </div>` : '';
+
+    const photoBtns = canEdit ? `
+        <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="triggerPhotoUpload()"><i class="ti ti-camera"></i> ${hasImg ? 'Заменить фото' : 'Загрузить фото'}</button>
+            ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
+        </div>` : '';
+
+    document.getElementById('product-modal-content').innerHTML = `
+        <div class="modal-header">
+            <h5 class="modal-title">${escHtml(item.item_name)}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="product-detail-gallery">
+                        ${hasImg
+                            ? `<img src="${API.URL}${item.image}" onclick="openLightbox('${API.URL}${item.image}')" alt="">`
+                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:80px;color:#d1d5db;background:#f8f9fa;cursor:${canEdit?'pointer':'default'};" ${canEdit?`onclick="triggerPhotoUpload()"`:''}><i class="ti ti-camera-plus"></i></div>`}
+                    </div>
+                    ${photoBtns}
+                </div>
+                <div class="col-md-7">
+                    <div class="text-muted small mb-2">Код: ${item.item_code}</div>
+                    <div class="product-detail-price">${formatPrice(item.valuation_rate)}</div>
+                    <div class="product-detail-availability">
+                        <span class="avail-dot green"></span>
+                        <strong>${item.actual_qty} шт.</strong> у ${viewingMaster}
+                    </div>
+                    <table class="table table-sm mt-3 mb-0">
+                        ${item.article ? `<tr><td class="text-muted">Артикул</td><td><strong>${escHtml(item.article)}</strong></td></tr>` : ''}
+                        ${item.compatibility ? `<tr><td class="text-muted">Совместимость</td><td>${escHtml(item.compatibility)}</td></tr>` : ''}
+                        <tr><td class="text-muted">Локация</td><td>${item.locация || '—'}</td></tr>
+                        <tr><td class="text-muted">Место</td><td>${item.location || '—'}</td></tr>
+                        ${item.supplier ? `<tr><td class="text-muted">Поставщик</td><td>${escHtml(item.supplier)}</td></tr>` : ''}
+                        ${item.purchasePrice ? `<tr><td class="text-muted">Цена закупки</td><td>${formatPrice(item.purchasePrice)}</td></tr>` : ''}
+                        ${item.notes ? `<tr><td class="text-muted">Примечание</td><td>${escHtml(item.notes)}</td></tr>` : ''}
+                    </table>
+                    ${adminActions}
+                </div>
+            </div>
+        </div>
+    `;
+    new bootstrap.Modal(document.getElementById('product-modal')).show();
+}
+
+// ===== Admin: Edit meta fields =====
+function openEditMeta(code) {
+    if (!Auth.isAdmin()) return;
+    const item = allItems.find(i => i.item_code === code);
+    if (!item) return;
+    const article = prompt('Артикул производителя:', item.article || '');
+    if (article === null) return;
+    const compat = prompt('Совместимость:', item.compatibility || '');
+    if (compat === null) return;
+    const supplier = prompt('Поставщик:', item.supplier || '');
+    if (supplier === null) return;
+    const purch = prompt('Цена закупки, ₽:', item.purchasePrice || '');
+    if (purch === null) return;
+    const minS = prompt('Мин. остаток:', item.minStock || '');
+    if (minS === null) return;
+    Meta.set(code, { article, compatibility: compat, supplier, purchasePrice: parseFloat(purch) || 0, minStock: parseInt(minS) || 0 });
+    toast('Сохранено', 'success');
+    loadData().then(() => openProduct(code));
+}
+
+// ===== Admin: Delete item =====
+function confirmDelete(code, name) {
+    if (!Auth.isAdmin()) return;
+    if (!confirm(`Удалить товар "${name}"?\n\nБудет удалена вся история перемещений.`)) return;
+    performDelete(code);
+}
+
+async function performDelete(code) {
+    toast('Удаление...', '');
+    try {
+        await deleteItemCompletely(code);
+        await new Promise(r => setTimeout(r, 500));
+        bootstrap.Modal.getInstance(document.getElementById('product-modal'))?.hide();
+        await loadData();
+        toast('Удалено', 'success');
+    } catch (e) { toast('Ошибка удаления', 'error'); }
+}
+
+// ===== Photo upload (admin only) =====
+function triggerPhotoUpload() { document.getElementById('detail-photo-input').click(); }
+
+async function uploadPhotoForCurrent(input) {
+    if (!input.files || !input.files[0] || !currentDetailCode) return;
+    const code = currentDetailCode;
+    try {
+        toast('Загрузка...', '');
+        const up = await API.uploadFile(input.files[0], code);
+        if (up.message && up.message.file_url) {
+            await API.update('Item', code, { image: up.message.file_url });
+            toast('Фото загружено', 'success');
+            await loadData();
+            openProduct(code);
+        }
+    } catch (e) { toast('Ошибка загрузки', 'error'); }
+    input.value = '';
+}
+
+async function deleteCurrentPhoto() {
+    if (!currentDetailCode || !confirm('Удалить фото?')) return;
+    try {
+        await API.update('Item', currentDetailCode, { image: '' });
+        toast('Фото удалено', 'success');
+        await loadData();
+        openProduct(currentDetailCode);
+    } catch (e) { toast('Ошибка', 'error'); }
+}
+
+function openLightbox(url) {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('active');
+}
+
+// ===== Add part directly to master's подотчёт =====
+function openAddDirectModal() {
+    if (!Auth.isAdmin()) return;
+    document.getElementById('add-direct-master').textContent = viewingMaster;
+    // Populate selects
+    const s = getSettings();
+    document.getElementById('ad-group').innerHTML = s.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    document.getElementById('ad-location').innerHTML = '<option value="">—</option>' + s.locations.map(l => `<option value="${l}">${l}</option>`).join('');
+    // Reset form
+    document.getElementById('ad-name').value = '';
+    document.getElementById('ad-qty').value = 1;
+    document.getElementById('ad-price').value = '';
+    document.getElementById('ad-notes').value = '';
+    document.getElementById('ad-photo-preview').style.display = 'none';
+    document.getElementById('ad-photo').value = '';
+    new bootstrap.Modal(document.getElementById('add-direct-modal')).show();
+}
+
+function previewAdPhoto(input) {
+    const preview = document.getElementById('ad-photo-preview');
+    if (input.files && input.files[0]) {
+        const r = new FileReader();
+        r.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        r.readAsDataURL(input.files[0]);
+    }
+}
+
+async function submitAddDirect(e) {
+    e.preventDefault();
+    const name = document.getElementById('ad-name').value.trim();
+    const group = document.getElementById('ad-group').value;
+    const qty = document.getElementById('ad-qty').value;
+    const price = document.getElementById('ad-price').value;
+    const loc = document.getElementById('ad-location').value;
+    const notes = document.getElementById('ad-notes').value.trim();
+    const sourceType = document.getElementById('ad-source').value;
+    const photoFile = document.getElementById('ad-photo').files[0];
+
+    const code = generateItemCode(name);
+
+    try {
+        toast('Создание...', '');
+
+        // 1. Create Item with responsible set to this master
+        const itemRes = await API.create('Item', {
+            item_code: code,
+            item_name: name,
+            custom_source_type: sourceType,
+            item_group: group,
+            stock_uom: 'Nos',
+            is_stock_item: 1,
+            custom_notes: notes ? `Подотчёт ${viewingMaster}. ${notes}` : `Подотчёт ${viewingMaster}`,
+            'custom_locация': loc || 'У мастера',
+            custom_responsible: viewingMaster
+        });
+        if (itemRes.exception) throw new Error(itemRes.exception);
+
+        // 2. Upload photo if provided
+        if (photoFile) {
+            const upRes = await API.uploadFile(photoFile, code);
+            if (upRes.message && upRes.message.file_url) {
+                await API.update('Item', code, { image: upRes.message.file_url });
+            }
+        }
+
+        // 3. Stock entry → Подотчёт
+        const seRes = await API.create('Stock Entry', {
+            stock_entry_type: 'Material Receipt',
+            to_warehouse: 'Подотчёт - L',
+            company: 'LabRemonta',
+            remarks: `Добавлено в подотчёт ${viewingMaster}`,
+            items: [{
+                item_code: code,
+                qty: parseFloat(qty),
+                basic_rate: parseFloat(price),
+                t_warehouse: 'Подотчёт - L'
+            }]
+        });
+        if (seRes.exception) throw new Error(seRes.exception);
+
+        await API.update('Stock Entry', seRes.data.name, { docstatus: 1 });
+
+        toast('Запчасть добавлена!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('add-direct-modal')).hide();
+        loadData();
+    } catch (err) {
+        toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error');
+    }
+}
+</script>
+</body>
+</html>

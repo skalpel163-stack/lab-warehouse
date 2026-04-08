@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мастера — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+    .master-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid transparent;
+        transition: all 0.15s ease;
+        cursor: pointer;
+        height: 100%;
+    }
+    .master-card:hover {
+        box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+    }
+    .master-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: #00c853;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+    .master-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 16px;
+    }
+    .mini-stat {
+        background: #f1f3f5;
+        padding: 12px 14px;
+        border-radius: 10px;
+    }
+    .mini-stat .val {
+        font-size: 18px;
+        font-weight: 700;
+        color: #001a34;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+    }
+    .mini-stat .lbl {
+        font-size: 10.5px;
+        color: #8a94a6;
+        margin-top: 3px;
+        font-weight: 500;
+    }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h2 class="mb-0"><i class="ti ti-users me-2" style="color:#00c853;"></i>Мастера</h2>
+                    <div class="text-muted">Все мастера компании и их подотчёты</div>
+                </div>
+            </div>
+
+            <!-- Summary stats -->
+            <div class="stats-strip mb-4">
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-masters">0</span>
+                    <span class="stats-strip-label">мастеров</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-total-items">0</span>
+                    <span class="stats-strip-label">позиций</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item stats-strip-total">
+                    <span class="stats-strip-value" id="stat-total-value">0 ₽</span>
+                    <span class="stats-strip-label">стоимость</span>
+                </div>
+                <div class="stats-strip-dot"></div>
+                <div class="stats-strip-item">
+                    <span class="stats-strip-value" id="stat-unassigned">0</span>
+                    <span class="stats-strip-label">без ответственного</span>
+                </div>
+            </div>
+
+            <!-- Masters grid -->
+            <div class="row row-cards" id="masters-grid">
+                <div class="col-12 text-center text-muted py-4">Загрузка...</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/api.js"></script>
+<script>
+// Only admins
+const user = Auth.require('admin');
+initNavbar('masters');
+
+document.addEventListener('DOMContentLoaded', loadMasters);
+
+async function loadMasters() {
+    try {
+        const allItems = await fetchWarehouseData();
+        const masters = getAllMasters();
+
+        // Calculate stats for each master
+        const masterStats = masters.map(m => {
+            const items = allItems.filter(i =>
+                i.warehouse.includes('Подотчёт') && i.responsible === m.responsible
+            );
+            const totalQty = items.reduce((s, i) => s + i.actual_qty, 0);
+            const totalVal = items.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+            return {
+                ...m,
+                itemsCount: items.length,
+                totalQty,
+                totalVal
+            };
+        });
+
+        // Unassigned items (in подотчёт with no responsible or unknown responsible)
+        const knownResponsibles = new Set(masters.map(m => m.responsible));
+        const unassignedItems = allItems.filter(i =>
+            i.warehouse.includes('Подотчёт') && (!i.responsible || !knownResponsibles.has(i.responsible))
+        );
+
+        // Update summary
+        document.getElementById('stat-masters').textContent = masters.length;
+        document.getElementById('stat-total-items').textContent = masterStats.reduce((s, m) => s + m.itemsCount, 0) + unassignedItems.length;
+        document.getElementById('stat-total-value').textContent = formatPrice(
+            masterStats.reduce((s, m) => s + m.totalVal, 0) +
+            unassignedItems.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0)
+        );
+        document.getElementById('stat-unassigned').textContent = unassignedItems.length;
+
+        // Render master cards
+        const grid = document.getElementById('masters-grid');
+        let html = masterStats.map(m => {
+            const initial = m.name.charAt(0).toUpperCase();
+            return `
+                <div class="col-md-6 col-lg-4">
+                    <a href="my.html?master=${encodeURIComponent(m.responsible)}" class="master-card d-block text-decoration-none text-reset">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="master-avatar">${initial}</div>
+                            <div class="flex-fill">
+                                <div style="font-size:17px;font-weight:600;color:#111;">${m.name}</div>
+                                <div class="text-muted small">${m.login}</div>
+                            </div>
+                            <i class="ti ti-chevron-right text-muted"></i>
+                        </div>
+                        <div class="master-stats">
+                            <div class="mini-stat">
+                                <div class="val">${m.itemsCount}</div>
+                                <div class="lbl">Позиций</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="val">${m.totalQty}</div>
+                                <div class="lbl">Всего штук</div>
+                            </div>
+                            <div class="mini-stat" style="grid-column: span 2;">
+                                <div class="val">${formatPrice(m.totalVal)}</div>
+                                <div class="lbl">Сумма на подотчёте</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            `;
+        }).join('');
+
+        // Add unassigned card if any
+        if (unassignedItems.length > 0) {
+            const unassignedVal = unassignedItems.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+            const unassignedQty = unassignedItems.reduce((s, i) => s + i.actual_qty, 0);
+            html += `
+                <div class="col-md-6 col-lg-4">
+                    <a href="unassigned.html" class="master-card d-block text-decoration-none text-reset" style="border:1px dashed #e53935;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="master-avatar" style="background:#e53935;color:white;"><i class="ti ti-alert-circle"></i></div>
+                            <div class="flex-fill">
+                                <div style="font-size:17px;font-weight:600;color:#111;">Без ответственного</div>
+                                <div class="text-muted small">Подотчёт не закреплён</div>
+                            </div>
+                            <i class="ti ti-chevron-right text-muted"></i>
+                        </div>
+                        <div class="master-stats">
+                            <div class="mini-stat">
+                                <div class="val">${unassignedItems.length}</div>
+                                <div class="lbl">Позиций</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="val">${unassignedQty}</div>
+                                <div class="lbl">Штук</div>
+                            </div>
+                            <div class="mini-stat" style="grid-column: span 2;">
+                                <div class="val">${formatPrice(unassignedVal)}</div>
+                                <div class="lbl">Сумма</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            `;
+        }
+
+        grid.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        toast('Ошибка загрузки', 'error');
+    }
+}
+</script>
+</body>
+</html>

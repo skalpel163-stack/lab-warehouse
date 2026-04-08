@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Склад запчастей — Лаборатория Ремонта</title>
+<!-- Tabler CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Brand -->
+<link rel="stylesheet" href="assets/brand.css">
+</head>
+<body>
+
+<div class="page">
+
+<!-- ========== Navbar (injected) ========== -->
+<div id="navbar-slot"></div>
+
+<!-- ========== Search Bar ========== -->
+<div class="search-bar">
+    <div class="container-xl">
+        <div class="row g-2">
+            <div class="col">
+                <input type="text" class="search-input-lr" id="search-input" placeholder="Поиск по названию, артикулу, коду..." oninput="debounceSearch()">
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="ti ti-search"></i> Найти
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== Page ========== -->
+<div class="page-wrapper">
+    <div class="container-xl py-3">
+
+        <!-- Stats bar -->
+        <div class="stats-strip mb-3">
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="stat-total">0</span>
+                <span class="stats-strip-label">позиций</span>
+            </div>
+            <div class="stats-strip-dot"></div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="stat-stock">0</span>
+                <span class="stats-strip-label">на складе</span>
+            </div>
+            <div class="stats-strip-dot"></div>
+            <div class="stats-strip-item">
+                <span class="stats-strip-value" id="stat-accountable">0</span>
+                <span class="stats-strip-label">подотчёт</span>
+            </div>
+            <div class="stats-strip-dot"></div>
+            <div class="stats-strip-item stats-strip-warn" id="stat-low-wrap" style="display:none;">
+                <span class="stats-strip-value" id="stat-low">0</span>
+                <span class="stats-strip-label">заканчиваются</span>
+            </div>
+            <div class="stats-strip-item stats-strip-total">
+                <span class="stats-strip-value" id="stat-value">0 ₽</span>
+                <span class="stats-strip-label">стоимость</span>
+                <span class="stats-strip-sub" id="stat-paid-free" style="font-size:11px;color:var(--lr-text-muted);margin-left:8px;"></span>
+            </div>
+        </div>
+
+        <!-- Catalog layout -->
+        <div class="row">
+            <!-- Sidebar filters -->
+            <aside class="col-lg-3 filter-sidebar">
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Источник <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-source">
+                        <label class="filter-check"><input type="checkbox" value="Купленная" onchange="applyFilters()"> Купленная <span class="count" id="fc-paid">0</span></label>
+                        <label class="filter-check"><input type="checkbox" value="Бесплатная" onchange="applyFilters()"> Бесплатная <span class="count" id="fc-free">0</span></label>
+                    </div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Статус <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-status">
+                        <label class="filter-check"><input type="checkbox" value="Основной" onchange="applyFilters()"> На складе <span class="count" id="fc-stock">0</span></label>
+                        <label class="filter-check"><input type="checkbox" value="Подотчёт" onchange="applyFilters()"> Подотчёт <span class="count" id="fc-account">0</span></label>
+                        <label class="filter-check"><input type="checkbox" value="Списан" onchange="applyFilters()"> Списано <span class="count" id="fc-written">0</span></label>
+                    </div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Тип запчасти <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-parttype"></div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Марка <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" id="filter-brand" style="display:none;"></div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Тип техники <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" id="filter-appliance" style="display:none;"></div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Цена, ₽ <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body">
+                        <div class="price-slider-container">
+                            <div class="price-slider-track">
+                                <div class="price-slider-fill" id="price-fill"></div>
+                                <input type="range" id="price-slider-min" min="0" max="50000" value="0" step="100" oninput="syncPriceSlider('min')">
+                                <input type="range" id="price-slider-max" min="0" max="50000" value="50000" step="100" oninput="syncPriceSlider('max')">
+                            </div>
+                        </div>
+                        <div class="price-inputs">
+                            <input type="number" id="price-from" placeholder="от" oninput="syncPriceInput('min')">
+                            <span>—</span>
+                            <input type="number" id="price-to" placeholder="до" oninput="syncPriceInput('max')">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Ответственный <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-responsible"></div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Локация <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" id="filter-locations" style="display:none;"></div>
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">
+                    <i class="ti ti-x"></i> Сбросить фильтры
+                </button>
+            </aside>
+
+            <!-- Main catalog -->
+            <div class="col-lg-9">
+                <div class="toolbar">
+                    <div class="text-muted" id="results-count">Загрузка...</div>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="sort-select" onchange="applyFilters()" style="width:auto;">
+                            <option value="name">По названию</option>
+                            <option value="price-asc">Сначала дешёвые</option>
+                            <option value="price-desc">Сначала дорогие</option>
+                            <option value="qty-desc">По количеству</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row row-cards" id="products-grid">
+                    <div class="col-12 empty-state">
+                        <div class="icon"><i class="ti ti-package"></i></div>
+                        <p>Загрузка товаров...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+</div><!-- /.page -->
+
+<!-- ========== Product Detail Modal ========== -->
+<div class="modal modal-blur fade" id="product-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content" id="product-modal-content"></div>
+    </div>
+</div>
+
+<!-- ========== Add Item Modal ========== -->
+<div class="modal modal-blur fade" id="add-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить товар</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitAddItem(event)">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label required">Название</label>
+                                <input type="text" class="form-control" id="add-name" required placeholder="Например: Помпа Ulka EP5 48w">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label required">Группа</label>
+                                    <select class="form-select" id="add-group" required></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label required">Кол-во</label>
+                                    <input type="number" class="form-control" id="add-qty" required value="1" min="1">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label required">Цена, ₽</label>
+                                    <input type="number" class="form-control" id="add-price" required placeholder="1500">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Артикул производителя</label>
+                                    <input type="text" class="form-control" id="add-article" placeholder="WES8163L2505">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Поставщик</label>
+                                    <input type="text" class="form-control" id="add-supplier" placeholder="Название магазина">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Цена закупки, ₽</label>
+                                    <input type="number" class="form-control" id="add-purchase-price" placeholder="1200">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Мин. остаток</label>
+                                    <input type="number" class="form-control" id="add-min-stock" placeholder="2" min="0">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Совместимость с моделями</label>
+                                <textarea class="form-control" id="add-compatibility" rows="2" placeholder="iPhone 12, iPhone 12 Pro, iPhone 12 mini"></textarea>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Локация</label>
+                                    <select class="form-select" id="add-location"></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Ответственный</label>
+                                    <select class="form-select" id="add-responsible"></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Источник</label>
+                                    <select class="form-select" id="add-source">
+                                        <option value="Купленная">Купленная</option>
+                                        <option value="Бесплатная">Бесплатная</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Место хранения</label>
+                                <input type="text" class="form-control" id="add-place" placeholder="Полка A3, Ящик 5">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Примечание</label>
+                                <textarea class="form-control" id="add-notes" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Фото</label>
+                            <div id="photo-drop" style="border:2px dashed #e5e7eb;border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:#fafbfc;min-height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;" onclick="document.getElementById('add-photo').click()">
+                                <i class="ti ti-camera-plus" style="font-size:40px;color:#9ca3af;"></i>
+                                <p class="text-muted mt-2 mb-0" style="font-size:12px;">Нажмите для загрузки</p>
+                                <img id="add-photo-preview" style="max-width:100%;max-height:200px;display:none;border-radius:8px;margin-top:8px;">
+                            </div>
+                            <input type="file" id="add-photo" accept="image/*" style="display:none" onchange="previewAddPhoto(this)">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-yellow ms-auto"><i class="ti ti-plus"></i> Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== Write-Off Modal ========== -->
+<div class="modal modal-blur fade" id="writeoff-modal" tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Списание товара</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitWriteOff(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label required">Товар</label>
+                        <select class="form-select" id="wo-item" required onchange="updateWoQty()">
+                            <option value="">-- Выберите --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Доступно</label>
+                        <input type="text" class="form-control" id="wo-available" readonly style="background:#f8f9fa;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Количество</label>
+                        <input type="number" class="form-control" id="wo-qty" required value="1" min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Заказ / Причина</label>
+                        <input type="text" class="form-control" id="wo-order" required placeholder="#12345 или причина">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Комментарий</label>
+                        <textarea class="form-control" id="wo-comment" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger ms-auto"><i class="ti ti-file-minus"></i> Списать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== History Modal ========== -->
+<div class="modal modal-blur fade" id="history-modal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">История списаний</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col"><input type="text" class="form-control" id="hist-search" placeholder="Поиск..." oninput="filterHistory()"></div>
+                    <div class="col-auto"><input type="date" class="form-control" id="hist-from" onchange="filterHistory()"></div>
+                    <div class="col-auto"><input type="date" class="form-control" id="hist-to" onchange="filterHistory()"></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-vcenter">
+                        <thead><tr><th>Дата</th><th>Товар</th><th>Кол-во</th><th>Заказ/Причина</th><th>Комментарий</th></tr></thead>
+                        <tbody id="hist-table"><tr><td colspan="5" class="text-center text-muted">Загрузка...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="me-auto">
+                    <strong>Всего:</strong> <span id="hist-total-count">0</span> &nbsp;&nbsp;
+                    <strong>Сумма:</strong> <span id="hist-total-value">0 ₽</span>
+                </div>
+                <button class="btn btn-outline-primary" onclick="exportCSV()"><i class="ti ti-download"></i> CSV</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== Lightbox ========== -->
+<div class="lightbox-overlay" id="lightbox" onclick="if(event.target===this)this.classList.remove('active')">
+    <button class="lightbox-close" onclick="document.getElementById('lightbox').classList.remove('active')">&times;</button>
+    <img id="lightbox-img" src="">
+</div>
+
+<!-- Hidden photo input for product detail edits -->
+<input type="file" id="detail-photo-input" accept="image/*" style="display:none" onchange="uploadPhotoForCurrent(this)">
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/api.js"></script>
+<script>
+// Require auth
+const currentUser = Auth.require();
+
+// Render navbar
+initNavbar('catalog');
+
+// ==================== CATALOG PAGE LOGIC ====================
+
+let allItems = [];
+let filteredItems = [];
+let currentCategory = '';
+let filters = {
+    status: '', partType: '', brand: '', appliance: '',
+    location: '', responsible: ''
+};
+let writeOffHistory = [];
+let searchTimer = null;
+let currentDetailCode = null;
+
+// Hide admin-only controls for masters
+if (Auth.isMaster()) {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Masters see only catalog (read-only for general stock)
+    });
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    populateFormSelects();
+    loadData();
+});
+
+// ===== Load =====
+async function loadData() {
+    try {
+        allItems = await fetchWarehouseData();
+        updateStats(allItems);
+        renderFilterLists();
+        applyFilters();
+    } catch (e) {
+        console.error(e);
+        toast('Ошибка загрузки данных', 'error');
+    }
+}
+
+// ===== Toggle filter collapse =====
+function toggleFilter(h5) {
+    const body = h5.nextElementSibling;
+    const icon = h5.querySelector('i');
+    if (body.style.display === 'none') {
+        body.style.display = '';
+        icon.className = 'ti ti-chevron-up';
+        h5.classList.remove('collapsed');
+    } else {
+        body.style.display = 'none';
+        icon.className = 'ti ti-chevron-down';
+        h5.classList.add('collapsed');
+    }
+}
+
+// ===== Get checked values from a filter container =====
+function getChecked(containerId) {
+    const checks = document.querySelectorAll(`#${containerId} input[type="checkbox"]:checked`);
+    return [...checks].map(c => c.value);
+}
+
+// ===== Filters =====
+function applyFilters() {
+    const search = (document.getElementById('search-input').value || '').toLowerCase();
+    const priceFrom = parseFloat(document.getElementById('price-from').value) || 0;
+    const priceTo = parseFloat(document.getElementById('price-to').value) || Infinity;
+    const sort = document.getElementById('sort-select').value;
+
+    const checkedSource = getChecked('filter-source');
+    const checkedStatus = getChecked('filter-status');
+    const checkedPartType = getChecked('filter-parttype');
+    const checkedBrand = getChecked('filter-brand');
+    const checkedAppliance = getChecked('filter-appliance');
+    const checkedResp = getChecked('filter-responsible');
+    const checkedLoc = getChecked('filter-locations');
+
+    filteredItems = allItems.filter(item => {
+        const matchSearch = !search ||
+            item.item_name.toLowerCase().includes(search) ||
+            item.item_code.toLowerCase().includes(search) ||
+            (item.article && item.article.toLowerCase().includes(search)) ||
+            (item.notes && item.notes.toLowerCase().includes(search)) ||
+            (item.compatibility && item.compatibility.toLowerCase().includes(search));
+
+        const matchSource = !checkedSource.length || checkedSource.includes(item.sourceType || 'Купленная');
+        const matchStatus = !checkedStatus.length || checkedStatus.some(s => item.warehouse.includes(s));
+        const matchPartType = !checkedPartType.length || checkedPartType.some(t => (item._partTypes || []).includes(t));
+        const matchBrand = !checkedBrand.length || checkedBrand.some(b => (item._brands || []).includes(b));
+        const matchAppliance = !checkedAppliance.length || checkedAppliance.some(a => (item._appliances || []).includes(a));
+        const matchResp = !checkedResp.length || checkedResp.includes(item.responsible);
+        const matchLoc = !checkedLoc.length || checkedLoc.includes(item.locация);
+        const matchPrice = item.valuation_rate >= priceFrom && item.valuation_rate <= priceTo;
+
+        const matchCat = !currentCategory ||
+            (item.locация && item.locация.toUpperCase() === currentCategory) ||
+            (item.item_code && item.item_code.toUpperCase().includes(currentCategory));
+
+        return matchSearch && matchSource && matchStatus && matchPartType && matchBrand && matchAppliance && matchResp && matchLoc && matchPrice && matchCat;
+    });
+
+    filteredItems.sort((a, b) => {
+        switch (sort) {
+            case 'price-asc': return a.valuation_rate - b.valuation_rate;
+            case 'price-desc': return b.valuation_rate - a.valuation_rate;
+            case 'qty-desc': return b.actual_qty - a.actual_qty;
+            default: return a.item_name.localeCompare(b.item_name, 'ru');
+        }
+    });
+
+    renderGrid();
+    document.getElementById('results-count').innerHTML = `Найдено: <strong>${filteredItems.length}</strong> товаров`;
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 300);
+}
+
+function setCategory(cat, el) {
+    currentCategory = cat;
+    document.querySelectorAll('.cat-tab').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    applyFilters();
+}
+
+function resetFilters() {
+    currentCategory = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('price-from').value = '';
+    document.getElementById('price-to').value = '';
+    document.querySelectorAll('.filter-check input[type="checkbox"]').forEach(c => c.checked = false);
+    applyFilters();
+}
+
+// ===== Render filter lists (checkboxes + show more + search) =====
+function makeCheckbox(value, label, count) {
+    return `<label class="filter-check" data-label="${escHtml(label).toLowerCase()}"><input type="checkbox" value="${escHtml(value)}" onchange="applyFilters()"> ${escHtml(label)} <span class="count">${count}</span></label>`;
+}
+
+function renderFilterBlock(containerId, items, showSearch) {
+    const el = document.getElementById(containerId);
+    if (!items.length) {
+        el.innerHTML = '<div class="text-muted" style="font-size:12px;padding:4px 8px;">—</div>';
+        return;
+    }
+
+    const needCollapse = items.length > 5;
+    const needSearch = showSearch && items.length > 8;
+
+    let html = '';
+    if (needSearch) {
+        html += `<input type="text" class="filter-search" placeholder="Найти..." oninput="filterSearchInside(this, '${containerId}')">`;
+    }
+    html += `<div class="filter-items-list ${needCollapse ? 'collapsed' : ''}" id="${containerId}-list">`;
+    html += items.map(([val, cnt]) => makeCheckbox(val, val, cnt)).join('');
+    html += '</div>';
+    if (needCollapse) {
+        html += `<span class="filter-show-more" onclick="toggleShowMore(this, '${containerId}-list')">Показать всё (${items.length})</span>`;
+    }
+    el.innerHTML = html;
+}
+
+function toggleShowMore(btn, listId) {
+    const list = document.getElementById(listId);
+    if (list.classList.contains('collapsed')) {
+        list.classList.remove('collapsed');
+        list.classList.add('expanded');
+        btn.textContent = 'Свернуть';
+    } else {
+        list.classList.add('collapsed');
+        list.classList.remove('expanded');
+        btn.textContent = `Показать всё`;
+    }
+}
+
+function filterSearchInside(input, containerId) {
+    const q = input.value.toLowerCase();
+    const list = document.getElementById(containerId + '-list');
+    list.querySelectorAll('.filter-check').forEach(label => {
+        const text = label.getAttribute('data-label') || '';
+        label.style.display = !q || text.includes(q) ? '' : 'none';
+    });
+}
+
+function renderFilterLists() {
+    const countTags = (field) => {
+        const counts = {};
+        allItems.forEach(item => {
+            (item[field] || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+        });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    };
+
+    renderFilterBlock('filter-parttype', countTags('_partTypes'), false);
+    renderFilterBlock('filter-brand', countTags('_brands'), true);
+    renderFilterBlock('filter-appliance', countTags('_appliances'), true);
+
+    // Locations
+    const settings = getSettings();
+    const locItems = settings.locations.map(loc => [loc, allItems.filter(i => i.locация === loc).length]);
+    renderFilterBlock('filter-locations', locItems, false);
+
+    // Responsible
+    const respSet = new Set(settings.responsible);
+    getAllMasters().forEach(m => { if (m.responsible) respSet.add(m.responsible); });
+    allItems.forEach(i => { if (i.responsible) respSet.add(i.responsible); });
+    const respItems = [...respSet].map(r => [r, allItems.filter(i => i.responsible === r).length]);
+    renderFilterBlock('filter-responsible', respItems, false);
+
+    // Status counts
+    document.getElementById('fc-stock').textContent = allItems.filter(i => i.warehouse.includes('Основной')).length;
+    document.getElementById('fc-account').textContent = allItems.filter(i => i.warehouse.includes('Подотчёт')).length;
+    document.getElementById('fc-written').textContent = allItems.filter(i => i.warehouse.includes('Списан')).length;
+
+    // Price slider — set max to actual max price
+    initPriceSlider();
+}
+
+// ===== Render grid =====
+function renderGrid() {
+    const grid = document.getElementById('products-grid');
+    if (filteredItems.length === 0) {
+        grid.innerHTML = `<div class="col-12 empty-state">
+            <div class="icon"><i class="ti ti-package-off"></i></div>
+            <p>Ничего не найдено</p>
+        </div>`;
+        return;
+    }
+    grid.innerHTML = filteredItems.map(item => {
+        const hasImg = !!item.image;
+        const img = hasImg
+            ? `<img src="${API.URL}${item.image}" class="product-img" alt="" loading="lazy">`
+            : `<div class="no-img"><i class="ti ti-photo"></i></div>`;
+
+        let badge = '';
+        if (item.actual_qty > 5) badge = `<div class="card-badge stock">В наличии</div>`;
+        else if (item.actual_qty > 0) badge = `<div class="card-badge few">Мало</div>`;
+        else badge = `<div class="card-badge out">Нет</div>`;
+
+        const seller = item.responsible ? `<div class="card-seller">${escHtml(item.responsible)}</div>` : '';
+        const lowStock = item.minStock > 0 && item.actual_qty <= item.minStock
+            ? `<div class="low-stock-warn" title="Остаток ниже минимума">!</div>` : '';
+
+        const tags = [];
+        if (item.sourceType === 'Бесплатная') tags.push(`<span class="tag-pill" style="background:#dbeafe;color:#1e40af;">Бесплатная</span>`);
+        if (item._partTypes && item._partTypes[0]) tags.push(`<span class="tag-pill">${item._partTypes[0]}</span>`);
+        if (item._brands && item._brands[0]) tags.push(`<span class="tag-pill brand">${item._brands[0]}</span>`);
+
+        return `
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="card product-card" onclick="openProduct('${item.item_code}')" style="position:relative;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
+                    <div style="position:relative;">
+                        ${img}
+                        ${badge}
+                        ${seller}
+                        ${lowStock}
+                    </div>
+                    <div class="card-body">
+                        <div class="product-price">${formatPrice(item.valuation_rate)}</div>
+                        <div class="product-title">${escHtml(item.item_name)}</div>
+                        <div>${tags.join('')}</div>
+                        ${item.notes ? `<div class="product-note"><i class="ti ti-note"></i> ${escHtml(item.notes).substring(0, 60)}${item.notes.length > 60 ? '...' : ''}</div>` : ''}
+                        <div class="product-meta mt-2">
+                            <span>${item.actual_qty} шт.</span>
+                            <span>${getStatusText(item.warehouse)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ===== Stats =====
+function updateStats(items) {
+    const stock = items.filter(i => i.warehouse.includes('Основной')).reduce((s, i) => s + i.actual_qty, 0);
+    const acc = items.filter(i => i.warehouse.includes('Подотчёт')).reduce((s, i) => s + i.actual_qty, 0);
+    const low = items.filter(i => i.minStock > 0 && i.actual_qty <= i.minStock).length;
+    const totalValue = items.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+    const paidItems = items.filter(i => i.sourceType !== 'Бесплатная');
+    const freeItems = items.filter(i => i.sourceType === 'Бесплатная');
+    const paidValue = paidItems.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+    const freeValue = freeItems.reduce((s, i) => s + (i.stock_value || i.actual_qty * i.valuation_rate), 0);
+
+    document.getElementById('stat-total').textContent = items.length;
+    document.getElementById('stat-stock').textContent = stock;
+    document.getElementById('stat-accountable').textContent = acc;
+    document.getElementById('stat-low').textContent = low;
+    document.getElementById('stat-value').textContent = formatPrice(totalValue);
+    document.getElementById('stat-paid-free').textContent = `купл. ${formatPrice(paidValue)} / бесп. ${formatPrice(freeValue)}`;
+
+    // Source filter counts
+    const fcPaid = document.getElementById('fc-paid');
+    const fcFree = document.getElementById('fc-free');
+    if (fcPaid) fcPaid.textContent = paidItems.length;
+    if (fcFree) fcFree.textContent = freeItems.length;
+
+    const lowWrap = document.getElementById('stat-low-wrap');
+    if (lowWrap) lowWrap.style.display = low > 0 ? '' : 'none';
+}
+
+// ===== Product detail (modal) =====
+function openProduct(code) {
+    const item = allItems.find(i => i.item_code === code);
+    if (!item) return;
+    currentDetailCode = code;
+    const hasImg = !!item.image;
+    const availClass = item.warehouse.includes('Основной') ? 'green' : item.warehouse.includes('Подотчёт') ? 'yellow' : 'red';
+
+    const partTypesHtml = (item._partTypes || []).map(t => `<span class="tag-pill">${t}</span>`).join('');
+    const brandsHtml = (item._brands || []).map(t => `<span class="tag-pill brand">${t}</span>`).join('');
+    const appliancesHtml = (item._appliances || []).map(t => `<span class="tag-pill appliance">${t}</span>`).join('');
+
+    document.getElementById('product-modal-content').innerHTML = `
+        <div class="modal-header">
+            <h5 class="modal-title">${escHtml(item.item_name)}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-md-5">
+                    <div class="product-detail-gallery">
+                        ${hasImg
+                            ? `<img src="${API.URL}${item.image}" onclick="openLightbox('${API.URL}${item.image}')" alt="">`
+                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:80px;color:#d1d5db;background:#f8f9fa;${Auth.isAdmin()?'cursor:pointer;':''}" ${Auth.isAdmin()?`onclick="triggerPhotoUpload()"`:''}><i class="ti ti-camera-plus"></i></div>`}
+                    </div>
+                    ${Auth.isAdmin() ? `
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="triggerPhotoUpload()"><i class="ti ti-camera"></i> ${hasImg ? 'Заменить' : 'Загрузить'}</button>
+                        ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
+                    </div>` : ''}
+                </div>
+                <div class="col-md-7">
+                    <div class="text-muted mb-2" style="font-size:12px;">Код: ${item.item_code}</div>
+                    <div class="product-detail-price">${formatPrice(item.valuation_rate)}</div>
+                    <div class="product-detail-availability">
+                        <span class="avail-dot ${availClass}"></span>
+                        ${getStatusText(item.warehouse)} · <strong>${item.actual_qty} шт.</strong>
+                        ${item.minStock > 0 ? ` · мин. ${item.minStock}` : ''}
+                    </div>
+
+                    ${(partTypesHtml || brandsHtml || appliancesHtml) ? `
+                        <div class="mt-3">
+                            ${partTypesHtml}${brandsHtml}${appliancesHtml}
+                        </div>
+                    ` : ''}
+
+                    <table class="table table-sm mt-3 mb-0">
+                        <tbody>
+                            ${item.article ? `<tr><td class="text-muted">Артикул</td><td><strong>${escHtml(item.article)}</strong></td></tr>` : ''}
+                            ${item.compatibility ? `<tr><td class="text-muted">Совместимость</td><td>${escHtml(item.compatibility)}</td></tr>` : ''}
+                            <tr><td class="text-muted">Локация</td><td>${item.locация || '—'}</td></tr>
+                            <tr><td class="text-muted">Место</td><td>${item.location || '—'}</td></tr>
+                            <tr><td class="text-muted">Ответственный</td><td>${item.responsible || '—'}</td></tr>
+                            ${item.supplier ? `<tr><td class="text-muted">Поставщик</td><td>${escHtml(item.supplier)}</td></tr>` : ''}
+                            ${item.purchasePrice ? `<tr><td class="text-muted">Цена закупки</td><td>${formatPrice(item.purchasePrice)}</td></tr>` : ''}
+                            <tr><td class="text-muted">Группа</td><td>${item.item_group || '—'}</td></tr>
+                            <tr><td class="text-muted">Источник</td><td>${item.sourceType === 'Бесплатная' ? '<span style="color:#1e40af;font-weight:600;">Бесплатная</span>' : 'Купленная'}</td></tr>
+                            <tr><td class="text-muted">Общая стоимость</td><td><strong>${formatPrice(item.stock_value || item.actual_qty * item.valuation_rate)}</strong></td></tr>
+                        </tbody>
+                    </table>
+
+                    ${item.notes ? `<div class="alert alert-warning mt-3 mb-0" style="font-size:13px;"><i class="ti ti-note me-1"></i>${escHtml(item.notes)}</div>` : ''}
+
+                    ${Auth.isAdmin() ? `
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-outline-secondary flex-fill" onclick="openEditMeta('${item.item_code}')"><i class="ti ti-edit"></i> Доп. поля</button>
+                        <button class="btn btn-warning flex-fill" onclick="quickTransfer('${item.item_code}','${item.warehouse}')"><i class="ti ti-transfer"></i> Переместить</button>
+                        <button class="btn btn-danger" onclick="confirmDelete('${item.item_code}','${escHtml(item.item_name)}')"><i class="ti ti-trash"></i></button>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="mt-4">
+                <h5><i class="ti ti-history me-1"></i> История перемещений</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead><tr><th>Дата</th><th>Операция</th><th>Откуда</th><th>Куда</th><th>Кол-во</th><th>Комментарий</th></tr></thead>
+                        <tbody id="detail-history-body"><tr><td colspan="6" class="text-center text-muted">Загрузка...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    new bootstrap.Modal(document.getElementById('product-modal')).show();
+    loadDetailHistory(code);
+}
+
+async function loadDetailHistory(code) {
+    try {
+        const entries = await fetchItemHistory(code);
+        const tbody = document.getElementById('detail-history-body');
+        if (!entries.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Нет истории</td></tr>'; return; }
+        tbody.innerHTML = entries.map(e => {
+            const isIn = e.actual_qty > 0;
+            const op = getOpType(e);
+            const cls = isIn ? 'success' : 'danger';
+            return `<tr>
+                <td>${formatDate(e.posting_date)}</td>
+                <td><span class="badge bg-${cls}-lt">${op}</span></td>
+                <td>${isIn ? '—' : fmtWh(e.warehouse)}</td>
+                <td>${isIn ? fmtWh(e.warehouse) : '—'}</td>
+                <td>${Math.abs(e.actual_qty)}</td>
+                <td>${e._se.remarks || '—'}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        document.getElementById('detail-history-body').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Ошибка</td></tr>';
+    }
+}
+
+function getOpType(e) {
+    if (e.voucher_type === 'Stock Entry') {
+        if (e._se.to_warehouse && e._se.to_warehouse.includes('Списан')) return 'Списание';
+        if (e._se.from_warehouse && e._se.to_warehouse) return 'Перемещение';
+        if (e.actual_qty > 0) return 'Приход';
+        return 'Расход';
+    }
+    return e.voucher_type;
+}
+
+// ===== Quick transfer =====
+async function quickTransfer(code, warehouse) {
+    const newWh = prompt('Переместить в:\n1 — На склад\n2 — Подотчёт\n3 — Списать', '1');
+    if (!newWh) return;
+    const whMap = { '1': 'Основной склад - L', '2': 'Подотчёт - L', '3': 'Списан - L' };
+    const target = whMap[newWh];
+    if (!target || target === warehouse) return;
+    const item = allItems.find(i => i.item_code === code);
+    try {
+        toast('Перемещение...', '');
+        await transferItem(code, warehouse, target, item.actual_qty);
+        toast('Перемещено!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('product-modal'))?.hide();
+        await loadData();
+    } catch (e) { toast('Ошибка: ' + e.message.substring(0, 60), 'error'); }
+}
+
+// ===== Delete =====
+function confirmDelete(code, name) {
+    if (!confirm(`Удалить товар "${name}"?\n\nБудет удалена вся история перемещений.`)) return;
+    performDelete(code);
+}
+
+async function performDelete(code) {
+    toast('Удаление...', '');
+    try {
+        await deleteItemCompletely(code);
+        await new Promise(r => setTimeout(r, 500));
+        bootstrap.Modal.getInstance(document.getElementById('product-modal'))?.hide();
+        await loadData();
+        toast(allItems.some(i => i.item_code === code) ? 'Не удалось' : 'Удалено', 'success');
+    } catch (e) { toast('Ошибка удаления', 'error'); }
+}
+
+// ===== Photo =====
+function triggerPhotoUpload() {
+    document.getElementById('detail-photo-input').click();
+}
+
+async function uploadPhotoForCurrent(input) {
+    if (!input.files || !input.files[0] || !currentDetailCode) return;
+    const code = currentDetailCode;
+    try {
+        toast('Загрузка фото...', '');
+        const up = await API.uploadFile(input.files[0], code);
+        if (up.message && up.message.file_url) {
+            await API.update('Item', code, { image: up.message.file_url });
+            toast('Фото загружено!', 'success');
+            await loadData();
+            openProduct(code);
+        }
+    } catch (e) { toast('Ошибка загрузки', 'error'); }
+    input.value = '';
+}
+
+async function deleteCurrentPhoto() {
+    if (!currentDetailCode || !confirm('Удалить фото?')) return;
+    try {
+        await API.update('Item', currentDetailCode, { image: '' });
+        toast('Фото удалено', 'success');
+        await loadData();
+        openProduct(currentDetailCode);
+    } catch (e) { toast('Ошибка', 'error'); }
+}
+
+function openLightbox(url) {
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('active');
+}
+
+// ===== Edit meta (article, compatibility, supplier, etc) =====
+function openEditMeta(code) {
+    const item = allItems.find(i => i.item_code === code);
+    if (!item) return;
+
+    const article = prompt('Артикул производителя:', item.article || '');
+    if (article === null) return;
+    const compat = prompt('Совместимость с моделями:', item.compatibility || '');
+    if (compat === null) return;
+    const supplier = prompt('Поставщик:', item.supplier || '');
+    if (supplier === null) return;
+    const purch = prompt('Цена закупки, ₽:', item.purchasePrice || '');
+    if (purch === null) return;
+    const minS = prompt('Минимальный остаток:', item.minStock || '');
+    if (minS === null) return;
+
+    Meta.set(code, {
+        article, compatibility: compat, supplier,
+        purchasePrice: parseFloat(purch) || 0,
+        minStock: parseInt(minS) || 0
+    });
+    toast('Сохранено', 'success');
+    loadData().then(() => openProduct(code));
+}
+
+// ===== Add Item Modal =====
+function openAddModal() {
+    new bootstrap.Modal(document.getElementById('add-modal')).show();
+}
+
+function populateFormSelects() {
+    const s = getSettings();
+    document.getElementById('add-group').innerHTML = s.groups.map(g => `<option value="${g}">${g}</option>`).join('');
+    document.getElementById('add-location').innerHTML = '<option value="">—</option>' + s.locations.map(l => `<option value="${l}">${l}</option>`).join('');
+    document.getElementById('add-responsible').innerHTML = '<option value="">—</option>' + s.responsible.map(r => `<option value="${r}">${r}</option>`).join('');
+}
+
+function previewAddPhoto(input) {
+    const preview = document.getElementById('add-photo-preview');
+    if (input.files && input.files[0]) {
+        const r = new FileReader();
+        r.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+        r.readAsDataURL(input.files[0]);
+    }
+}
+
+async function submitAddItem(e) {
+    e.preventDefault();
+    const data = {
+        name: document.getElementById('add-name').value.trim(),
+        group: document.getElementById('add-group').value,
+        qty: document.getElementById('add-qty').value,
+        price: document.getElementById('add-price').value,
+        loc: document.getElementById('add-location').value,
+        place: document.getElementById('add-place').value.trim(),
+        responsible: document.getElementById('add-responsible').value,
+        notes: document.getElementById('add-notes').value.trim(),
+        article: document.getElementById('add-article').value.trim(),
+        supplier: document.getElementById('add-supplier').value.trim(),
+        purchPrice: parseFloat(document.getElementById('add-purchase-price').value) || 0,
+        minStock: parseInt(document.getElementById('add-min-stock').value) || 0,
+        compat: document.getElementById('add-compatibility').value.trim(),
+        photo: document.getElementById('add-photo').files[0],
+        sourceType: document.getElementById('add-source').value
+    };
+    try {
+        toast('Создание товара...', '');
+        const code = await createItemWithStock(data.name, data.group, data.qty, data.price, data.loc, data.place, data.responsible, data.notes, data.photo, data.sourceType);
+        // Save metadata
+        Meta.set(code, {
+            article: data.article, compatibility: data.compat, supplier: data.supplier,
+            purchasePrice: data.purchPrice, minStock: data.minStock
+        });
+        toast('Товар добавлен!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('add-modal')).hide();
+        e.target.reset();
+        document.getElementById('add-photo-preview').style.display = 'none';
+        loadData();
+    } catch (err) { toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error'); }
+}
+
+// ===== Write-off =====
+function openWriteOffModal() {
+    const sel = document.getElementById('wo-item');
+    const avail = allItems.filter(i => !i.warehouse.includes('Списан'));
+    sel.innerHTML = '<option value="">-- Выберите --</option>' +
+        avail.map(i => `<option value="${i.item_code}" data-qty="${i.actual_qty}" data-warehouse="${i.warehouse}" data-price="${i.valuation_rate}">${escHtml(i.item_name)} (${i.actual_qty} шт.)</option>`).join('');
+    document.getElementById('wo-available').value = '';
+    document.getElementById('wo-qty').value = 1;
+    document.getElementById('wo-order').value = '';
+    document.getElementById('wo-comment').value = '';
+    new bootstrap.Modal(document.getElementById('writeoff-modal')).show();
+}
+
+function updateWoQty() {
+    const opt = document.getElementById('wo-item').selectedOptions[0];
+    if (opt && opt.value) {
+        document.getElementById('wo-available').value = `${opt.dataset.qty} шт. (${formatPrice(parseFloat(opt.dataset.price) || 0)} за шт.)`;
+        document.getElementById('wo-qty').max = opt.dataset.qty;
+    }
+}
+
+async function submitWriteOff(e) {
+    e.preventDefault();
+    const opt = document.getElementById('wo-item').selectedOptions[0];
+    const code = document.getElementById('wo-item').value;
+    const qty = parseInt(document.getElementById('wo-qty').value);
+    const order = document.getElementById('wo-order').value.trim();
+    const comment = document.getElementById('wo-comment').value.trim();
+    const remarks = `Заказ: ${order}${comment ? ' | ' + comment : ''}`;
+    try {
+        toast('Списание...', '');
+        await transferItem(code, opt.dataset.warehouse, 'Списан - L', qty, remarks);
+        toast('Списано!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('writeoff-modal')).hide();
+        loadData();
+    } catch (err) { toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error'); }
+}
+
+// ===== History modal =====
+async function openHistoryModal() {
+    new bootstrap.Modal(document.getElementById('history-modal')).show();
+    try {
+        const res = await API.getList('Stock Entry', ['name', 'posting_date', 'posting_time', 'remarks', 'total_amount'],
+            [['docstatus', '=', 1], ['to_warehouse', 'like', '%Списан%']], 500);
+        writeOffHistory = [];
+        for (const entry of (res.message || [])) {
+            try {
+                const d = await API.getDoc('Stock Entry', entry.name);
+                if (d.data && d.data.items) {
+                    for (const item of d.data.items) {
+                        writeOffHistory.push({
+                            date: entry.posting_date, item_code: item.item_code, item_name: item.item_name || item.item_code,
+                            qty: item.qty, amount: item.amount || 0, remarks: entry.remarks || ''
+                        });
+                    }
+                }
+            } catch (e) {}
+        }
+        renderHistoryModal(writeOffHistory);
+    } catch (e) { document.getElementById('hist-table').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Ошибка</td></tr>'; }
+}
+
+function renderHistoryModal(h) {
+    const tbody = document.getElementById('hist-table');
+    if (!h.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Нет списаний</td></tr>'; return; }
+    tbody.innerHTML = h.map(x => {
+        let order = '—', comment = '';
+        if (x.remarks) {
+            const m = x.remarks.match(/Заказ:\s*([^|]+)/);
+            if (m) { order = m[1].trim(); const cm = x.remarks.match(/\|\s*(.+)$/); if (cm) comment = cm[1].trim(); }
+            else comment = x.remarks;
+        }
+        return `<tr><td>${formatDate(x.date)}</td><td><strong>${escHtml(x.item_name)}</strong><br><small class="text-muted">${x.item_code}</small></td><td>${x.qty}</td><td>${order}</td><td>${comment || '—'}</td></tr>`;
+    }).join('');
+    document.getElementById('hist-total-count').textContent = h.reduce((s, x) => s + x.qty, 0) + ' шт.';
+    document.getElementById('hist-total-value').textContent = formatPrice(h.reduce((s, x) => s + x.amount, 0));
+}
+
+function filterHistory() {
+    const search = (document.getElementById('hist-search').value || '').toLowerCase();
+    const from = document.getElementById('hist-from').value;
+    const to = document.getElementById('hist-to').value;
+    const f = writeOffHistory.filter(x =>
+        (!search || x.item_name.toLowerCase().includes(search) || x.item_code.toLowerCase().includes(search) || (x.remarks && x.remarks.toLowerCase().includes(search)))
+        && (!from || x.date >= from) && (!to || x.date <= to));
+    renderHistoryModal(f);
+}
+
+function exportCSV() {
+    if (!writeOffHistory.length) { toast('Нет данных', 'error'); return; }
+    const hdr = ['Дата', 'Код', 'Название', 'Количество', 'Сумма', 'Заказ/Причина'];
+    const rows = writeOffHistory.map(x => {
+        let order = ''; const m = (x.remarks || '').match(/Заказ:\s*([^|]+)/); if (m) order = m[1].trim();
+        return [x.date, x.item_code, x.item_name, x.qty, x.amount, order || x.remarks || ''];
+    });
+    const csv = [hdr, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `списания_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast('CSV экспортирован', 'success');
+}
+
+// ===== Price slider =====
+function initPriceSlider() {
+    const prices = allItems.map(i => i.valuation_rate).filter(p => p > 0);
+    if (!prices.length) return;
+    const maxPrice = Math.ceil(Math.max(...prices) / 100) * 100;
+    const sliderMin = document.getElementById('price-slider-min');
+    const sliderMax = document.getElementById('price-slider-max');
+    sliderMin.max = maxPrice;
+    sliderMax.max = maxPrice;
+    sliderMin.value = 0;
+    sliderMax.value = maxPrice;
+    document.getElementById('price-from').value = '';
+    document.getElementById('price-to').value = '';
+    updatePriceFill();
+}
+
+function syncPriceSlider(which) {
+    const sliderMin = document.getElementById('price-slider-min');
+    const sliderMax = document.getElementById('price-slider-max');
+    let minVal = parseInt(sliderMin.value);
+    let maxVal = parseInt(sliderMax.value);
+
+    if (which === 'min' && minVal > maxVal) { sliderMin.value = maxVal; minVal = maxVal; }
+    if (which === 'max' && maxVal < minVal) { sliderMax.value = minVal; maxVal = minVal; }
+
+    document.getElementById('price-from').value = minVal > 0 ? minVal : '';
+    document.getElementById('price-to').value = maxVal < parseInt(sliderMax.max) ? maxVal : '';
+    updatePriceFill();
+    debounceSearch();
+}
+
+function syncPriceInput(which) {
+    const fromVal = parseInt(document.getElementById('price-from').value) || 0;
+    const toVal = parseInt(document.getElementById('price-to').value) || parseInt(document.getElementById('price-slider-max').max);
+    document.getElementById('price-slider-min').value = fromVal;
+    document.getElementById('price-slider-max').value = toVal;
+    updatePriceFill();
+    debounceSearch();
+}
+
+function updatePriceFill() {
+    const sliderMin = document.getElementById('price-slider-min');
+    const sliderMax = document.getElementById('price-slider-max');
+    const max = parseInt(sliderMax.max) || 1;
+    const left = (parseInt(sliderMin.value) / max) * 100;
+    const right = (parseInt(sliderMax.value) / max) * 100;
+    const fill = document.getElementById('price-fill');
+    fill.style.left = left + '%';
+    fill.style.width = (right - left) + '%';
+}
+</script>
+</body>
+</html>
