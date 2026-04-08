@@ -5,12 +5,15 @@
 // ========================================
 
 const DEFAULT_USERS = [
-    { login: 'admin',     password: 'admin123', role: 'admin',  name: 'Администратор', responsible: null },
-    { login: 'strebaev',  password: '1234',     role: 'master', name: 'Стребаев',      responsible: 'Стребаев' },
-    { login: 'butenyuk',  password: '1234',     role: 'master', name: 'Бутенюк',       responsible: 'Бутенюк' },
-    { login: 'grichenko', password: '1234',     role: 'master', name: 'Гриченко',      responsible: 'Гриченко' },
-    { login: 'ermakovich',password: '1234',     role: 'master', name: 'Ермакович',     responsible: 'Ермакович' },
-    { login: 'ershov',    password: '1234',     role: 'master', name: 'Ершов',         responsible: 'Ершов' }
+    { login: 'admin',      password: 'admin123', role: 'admin',  name: 'Администратор', responsible: null },
+    { login: 'stebaev',    password: '1234',     role: 'master', name: 'Стебаев',       responsible: 'Стебаев' },
+    { login: 'arsenyuk',   password: '1234',     role: 'master', name: 'Арсенюк',       responsible: 'Арсенюк' },
+    { login: 'grichenko',  password: '1234',     role: 'master', name: 'Гриченко',      responsible: 'Гриченко' },
+    { login: 'ermakovich', password: '1234',     role: 'master', name: 'Ермакович',     responsible: 'Ермакович' },
+    { login: 'ershov',     password: '1234',     role: 'master', name: 'Ершов',         responsible: 'Ершов' },
+    { login: 'legkodimov', password: '1234',     role: 'master', name: 'Легкодимов',    responsible: 'Легкодимов' },
+    { login: 'balandin',   password: '1234',     role: 'master', name: 'Баландин',      responsible: 'Баландин' },
+    { login: 'sopkin',     password: '1234',     role: 'master', name: 'Сопкин',        responsible: 'Сопкин' }
 ];
 
 function getUsers() {
