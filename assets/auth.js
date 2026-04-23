@@ -13,13 +13,20 @@ const DEFAULT_USERS = [
     { login: 'ershov',     password: '1234',     role: 'master', name: 'Ершов',         responsible: 'Ершов' },
     { login: 'legkodimov', password: '1234',     role: 'master', name: 'Легкодимов',    responsible: 'Легкодимов' },
     { login: 'balandin',   password: '1234',     role: 'master', name: 'Баландин',      responsible: 'Баландин' },
-    { login: 'sopkin',     password: '1234',     role: 'master', name: 'Сопкин',        responsible: 'Сопкин' }
+    { login: 'sopkin',     password: '1234',     role: 'master', name: 'Сопкин',        responsible: 'Сопкин' },
+    { login: 'nebaikin',   password: 'qqq123123', role: 'master', name: 'Небайкин',     responsible: 'Небайкин' }
 ];
 
 function getUsers() {
     try {
         const s = localStorage.getItem('lr_users');
-        return s ? JSON.parse(s) : [...DEFAULT_USERS];
+        if (!s) return [...DEFAULT_USERS];
+        const saved = JSON.parse(s);
+        // Merge: add any new DEFAULT_USERS not present in saved
+        DEFAULT_USERS.forEach(du => {
+            if (!saved.find(u => u.login === du.login)) saved.push(du);
+        });
+        return saved;
     } catch (e) { return [...DEFAULT_USERS]; }
 }
 

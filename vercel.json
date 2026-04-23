@@ -1,6 +1,7 @@
 {
     "rewrites": [
         { "source": "/api/proxy", "destination": "/api/proxy.js" },
-        { "source": "/api/upload", "destination": "/api/upload.js" }
+        { "source": "/api/upload", "destination": "/api/upload.js" },
+        { "source": "/api/files", "destination": "/api/files.js" }
     ]
 }

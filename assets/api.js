@@ -8,6 +8,18 @@
 const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:';
 
 const API = {
+    // URL prefix for images — direct for local, empty for production (images proxied via imgUrl)
+    get URL() {
+        return IS_LOCAL ? this._localUrl : '';
+    },
+
+    // Get proxied image URL for production
+    imgUrl(path) {
+        if (!path) return '';
+        if (IS_LOCAL) return `${this._localUrl}${path}`;
+        return `/api/files?path=${encodeURIComponent(path)}`;
+    },
+
     // Local dev fallback (only used when opening file:// directly)
     _localUrl: 'http://localhost:8080',
     _localKey: 'ffdaeed6662f499',
@@ -107,6 +119,7 @@ async function fetchWarehouseData() {
             _brands: meta.brands && meta.brands.length ? meta.brands : detectBrands(searchText),
             _appliances: meta.appliances && meta.appliances.length ? meta.appliances : detectAppliances(searchText),
             article: meta.article || '',
+            link: meta.link || '',
             compatibility: meta.compatibility || '',
             supplier: meta.supplier || '',
             purchasePrice: meta.purchasePrice || 0,

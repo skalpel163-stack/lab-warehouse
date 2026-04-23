@@ -3,6 +3,30 @@
 // Рендерит шапку с учётом роли пользователя
 // ========================================
 
+// ===== Theme management =====
+const Theme = {
+    KEY: 'lr-theme',
+    get() {
+        return localStorage.getItem(this.KEY) || 'light';
+    },
+    set(theme) {
+        localStorage.setItem(this.KEY, theme);
+        document.documentElement.setAttribute('data-theme', theme);
+    },
+    toggle() {
+        this.set(this.get() === 'dark' ? 'light' : 'dark');
+        // Update toggle icon
+        const btn = document.querySelector('.theme-toggle');
+        if (btn) btn.innerHTML = `<i class="ti ${this.get() === 'dark' ? 'ti-sun' : 'ti-moon'}"></i>`;
+    },
+    init() {
+        document.documentElement.setAttribute('data-theme', this.get());
+    }
+};
+
+// Apply theme immediately to prevent flash
+Theme.init();
+
 function renderNavbar(activePage = '') {
     const user = Auth.user;
     if (!user) return '';
@@ -22,6 +46,9 @@ function renderNavbar(activePage = '') {
         menuItems.push({ id: 'settings', href: 'settings.html', label: 'Настройки', icon: 'ti-settings' });
     } else {
         menuItems.push({ id: 'my', href: 'my.html', label: 'Мой подотчёт', icon: 'ti-briefcase' });
+        if (user.login === 'nebaikin') {
+            menuItems.push({ id: 'amway', href: 'amway.html', label: 'Amway', icon: 'ti-building-store' });
+        }
     }
 
     const menuHtml = menuItems.map(m => `
@@ -68,6 +95,11 @@ function renderNavbar(activePage = '') {
 
             <div class="navbar-nav flex-row order-md-last ms-auto">
                 <div class="nav-item d-none d-md-flex me-3">${addButton}</div>
+                <div class="nav-item d-flex align-items-center me-2">
+                    <button class="theme-toggle" onclick="Theme.toggle()" title="Переключить тему">
+                        <i class="ti ${Theme.get() === 'dark' ? 'ti-sun' : 'ti-moon'}"></i>
+                    </button>
+                </div>
                 <div class="nav-item dropdown">
                     <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
                         <span class="avatar avatar-sm" style="background:${isAdmin ? '#00c853' : '#f1f3f5'};color:${isAdmin ? '#fff' : '#001a34'};">${initial}</span>
@@ -82,6 +114,7 @@ function renderNavbar(activePage = '') {
                             <a href="#" class="dropdown-item" onclick="openHistoryModal && openHistoryModal()"><i class="ti ti-history me-2"></i>История списаний</a>
                             <div class="dropdown-divider"></div>
                         ` : ''}
+                        <a href="#" class="dropdown-item" onclick="Theme.toggle(); return false;"><i class="ti ${Theme.get() === 'dark' ? 'ti-sun' : 'ti-moon'} me-2"></i>${Theme.get() === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</a>
                         <a href="#" class="dropdown-item" onclick="location.reload()"><i class="ti ti-refresh me-2"></i>Обновить</a>
                         <div class="dropdown-divider"></div>
                         <a href="#" class="dropdown-item" onclick="Auth.logout(); return false;"><i class="ti ti-logout me-2"></i>Выйти</a>

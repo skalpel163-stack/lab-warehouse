@@ -73,20 +73,13 @@
             <!-- Sidebar filters -->
             <aside class="col-lg-3 filter-sidebar">
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Источник <i class="ti ti-chevron-up"></i></h5>
-                    <div class="filter-body" id="filter-source">
-                        <label class="filter-check"><input type="checkbox" value="Купленная" onchange="applyFilters()"> Купленная <span class="count" id="fc-paid">0</span></label>
-                        <label class="filter-check"><input type="checkbox" value="Бесплатная" onchange="applyFilters()"> Бесплатная <span class="count" id="fc-free">0</span></label>
-                    </div>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Марка <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-brand"></div>
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Статус <i class="ti ti-chevron-up"></i></h5>
-                    <div class="filter-body" id="filter-status">
-                        <label class="filter-check"><input type="checkbox" value="Основной" onchange="applyFilters()"> На складе <span class="count" id="fc-stock">0</span></label>
-                        <label class="filter-check"><input type="checkbox" value="Подотчёт" onchange="applyFilters()"> Подотчёт <span class="count" id="fc-account">0</span></label>
-                        <label class="filter-check"><input type="checkbox" value="Списан" onchange="applyFilters()"> Списано <span class="count" id="fc-written">0</span></label>
-                    </div>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Тип техники <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-appliance"></div>
                 </div>
 
                 <div class="filter-card" data-filter-card>
@@ -95,18 +88,8 @@
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Марка <i class="ti ti-chevron-down"></i></h5>
-                    <div class="filter-body" id="filter-brand" style="display:none;"></div>
-                </div>
-
-                <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Тип техники <i class="ti ti-chevron-down"></i></h5>
-                    <div class="filter-body" id="filter-appliance" style="display:none;"></div>
-                </div>
-
-                <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Цена, ₽ <i class="ti ti-chevron-up"></i></h5>
-                    <div class="filter-body">
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Цена, ₽ <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" style="display:none;">
                         <div class="price-slider-container">
                             <div class="price-slider-track">
                                 <div class="price-slider-fill" id="price-fill"></div>
@@ -123,13 +106,30 @@
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Ответственный <i class="ti ti-chevron-up"></i></h5>
-                    <div class="filter-body" id="filter-responsible"></div>
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Ответственный <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" id="filter-responsible" style="display:none;"></div>
                 </div>
 
                 <div class="filter-card" data-filter-card>
                     <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Локация <i class="ti ti-chevron-down"></i></h5>
                     <div class="filter-body" id="filter-locations" style="display:none;"></div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Статус <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" id="filter-status" style="display:none;">
+                        <label class="filter-check"><input type="checkbox" value="Основной" onchange="applyFilters()"> На складе <span class="count" id="fc-stock">0</span></label>
+                        <label class="filter-check"><input type="checkbox" value="Подотчёт" onchange="applyFilters()"> Подотчёт <span class="count" id="fc-account">0</span></label>
+                        <label class="filter-check"><input type="checkbox" value="Списан" onchange="applyFilters()"> Списано <span class="count" id="fc-written">0</span></label>
+                    </div>
+                </div>
+
+                <div class="filter-card" data-filter-card>
+                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Источник <i class="ti ti-chevron-down"></i></h5>
+                    <div class="filter-body" id="filter-source" style="display:none;">
+                        <label class="filter-check"><input type="checkbox" value="Купленная" onchange="applyFilters()"> Купленная <span class="count" id="fc-paid">0</span></label>
+                        <label class="filter-check"><input type="checkbox" value="Бесплатная" onchange="applyFilters()"> Бесплатная <span class="count" id="fc-free">0</span></label>
+                    </div>
                 </div>
 
                 <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">
@@ -139,6 +139,14 @@
 
             <!-- Main catalog -->
             <div class="col-lg-9">
+                <!-- Quick filters -->
+                <div class="d-flex gap-2 mb-3 flex-wrap" id="quick-filters">
+                    <button class="btn btn-sm btn-outline-secondary active" onclick="setQuickFilter('all', this)">Все</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="setQuickFilter('stock', this)">На складе <span class="badge bg-green-lt ms-1" id="qf-stock">0</span></button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="setQuickFilter('account', this)">Подотчёт <span class="badge bg-green-lt ms-1" id="qf-account">0</span></button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="setQuickFilter('free', this)" style="border-color:#3b82f6;color:#3b82f6;">Бесплатные <span class="badge ms-1" style="background:rgba(59,130,246,0.12);color:#3b82f6;" id="qf-free">0</span></button>
+                </div>
+
                 <div class="toolbar">
                     <div class="text-muted" id="results-count">Загрузка...</div>
                     <div class="d-flex gap-2">
@@ -157,6 +165,7 @@
                         <p>Загрузка товаров...</p>
                     </div>
                 </div>
+                <div id="pagination" class="d-flex justify-content-center align-items-center gap-2 mt-3 mb-3"></div>
             </div>
         </div>
 
@@ -372,7 +381,17 @@ initNavbar('catalog');
 
 let allItems = [];
 let filteredItems = [];
+let currentPage = 1;
+const PER_PAGE = 10;
 let currentCategory = '';
+let activeQuickFilter = 'all';
+
+function setQuickFilter(filter, btn) {
+    activeQuickFilter = filter;
+    document.querySelectorAll('#quick-filters .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+}
 let filters = {
     status: '', partType: '', brand: '', appliance: '',
     location: '', responsible: ''
@@ -464,7 +483,12 @@ function applyFilters() {
             (item.locация && item.locация.toUpperCase() === currentCategory) ||
             (item.item_code && item.item_code.toUpperCase().includes(currentCategory));
 
-        return matchSearch && matchSource && matchStatus && matchPartType && matchBrand && matchAppliance && matchResp && matchLoc && matchPrice && matchCat;
+        let matchQuick = true;
+        if (activeQuickFilter === 'stock') matchQuick = item.warehouse.includes('Основной');
+        else if (activeQuickFilter === 'account') matchQuick = item.warehouse.includes('Подотчёт');
+        else if (activeQuickFilter === 'free') matchQuick = item.sourceType === 'Бесплатная';
+
+        return matchQuick && matchSearch && matchSource && matchStatus && matchPartType && matchBrand && matchAppliance && matchResp && matchLoc && matchPrice && matchCat;
     });
 
     filteredItems.sort((a, b) => {
@@ -476,6 +500,7 @@ function applyFilters() {
         }
     });
 
+    currentPage = 1;
     renderGrid();
     document.getElementById('results-count').innerHTML = `Найдено: <strong>${filteredItems.length}</strong> товаров`;
 }
@@ -494,6 +519,9 @@ function setCategory(cat, el) {
 
 function resetFilters() {
     currentCategory = '';
+    activeQuickFilter = 'all';
+    document.querySelectorAll('#quick-filters .btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('#quick-filters .btn').classList.add('active');
     document.getElementById('search-input').value = '';
     document.getElementById('price-from').value = '';
     document.getElementById('price-to').value = '';
@@ -586,6 +614,39 @@ function renderFilterLists() {
 }
 
 // ===== Render grid =====
+function goPage(p) {
+    const totalPages = Math.ceil(filteredItems.length / PER_PAGE);
+    currentPage = Math.max(1, Math.min(p, totalPages));
+    renderGrid();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderPagination() {
+    const pag = document.getElementById('pagination');
+    const totalPages = Math.ceil(filteredItems.length / PER_PAGE);
+    if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+    let html = `<button class="btn btn-sm btn-outline-secondary" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="ti ti-chevron-left"></i></button>`;
+
+    const maxBtns = 7;
+    let start = Math.max(1, currentPage - 3);
+    let end = Math.min(totalPages, start + maxBtns - 1);
+    if (end - start < maxBtns - 1) start = Math.max(1, end - maxBtns + 1);
+
+    if (start > 1) html += `<button class="btn btn-sm btn-outline-secondary" onclick="goPage(1)">1</button>`;
+    if (start > 2) html += `<span class="text-muted">…</span>`;
+
+    for (let i = start; i <= end; i++) {
+        html += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-secondary'}" onclick="goPage(${i})">${i}</button>`;
+    }
+
+    if (end < totalPages - 1) html += `<span class="text-muted">…</span>`;
+    if (end < totalPages) html += `<button class="btn btn-sm btn-outline-secondary" onclick="goPage(${totalPages})">${totalPages}</button>`;
+
+    html += `<button class="btn btn-sm btn-outline-secondary" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="ti ti-chevron-right"></i></button>`;
+    pag.innerHTML = html;
+}
+
 function renderGrid() {
     const grid = document.getElementById('products-grid');
     if (filteredItems.length === 0) {
@@ -593,18 +654,19 @@ function renderGrid() {
             <div class="icon"><i class="ti ti-package-off"></i></div>
             <p>Ничего не найдено</p>
         </div>`;
+        document.getElementById('pagination').innerHTML = '';
         return;
     }
-    grid.innerHTML = filteredItems.map(item => {
+    const start = (currentPage - 1) * PER_PAGE;
+    const pageItems = filteredItems.slice(start, start + PER_PAGE);
+    grid.innerHTML = pageItems.map(item => {
         const hasImg = !!item.image;
         const img = hasImg
-            ? `<img src="${API.URL}${item.image}" class="product-img" alt="" loading="lazy">`
+            ? `<img src="${API.imgUrl(item.image)}" class="product-img" alt="" loading="lazy">`
             : `<div class="no-img"><i class="ti ti-photo"></i></div>`;
 
         let badge = '';
-        if (item.actual_qty > 5) badge = `<div class="card-badge stock">В наличии</div>`;
-        else if (item.actual_qty > 0) badge = `<div class="card-badge few">Мало</div>`;
-        else badge = `<div class="card-badge out">Нет</div>`;
+        if (item.actual_qty <= 0) badge = `<div class="card-badge out">Нет</div>`;
 
         const seller = item.responsible ? `<div class="card-seller">${escHtml(item.responsible)}</div>` : '';
         const lowStock = item.minStock > 0 && item.actual_qty <= item.minStock
@@ -638,6 +700,7 @@ function renderGrid() {
             </div>
         `;
     }).join('');
+    renderPagination();
 }
 
 // ===== Stats =====
@@ -657,6 +720,14 @@ function updateStats(items) {
     document.getElementById('stat-low').textContent = low;
     document.getElementById('stat-value').textContent = formatPrice(totalValue);
     document.getElementById('stat-paid-free').textContent = `купл. ${formatPrice(paidValue)} / бесп. ${formatPrice(freeValue)}`;
+
+    // Quick filter badge counts
+    const qfStock = document.getElementById('qf-stock');
+    const qfAccount = document.getElementById('qf-account');
+    const qfFree = document.getElementById('qf-free');
+    if (qfStock) qfStock.textContent = items.filter(i => i.warehouse.includes('Основной')).length;
+    if (qfAccount) qfAccount.textContent = items.filter(i => i.warehouse.includes('Подотчёт')).length;
+    if (qfFree) qfFree.textContent = freeItems.length;
 
     // Source filter counts
     const fcPaid = document.getElementById('fc-paid');
@@ -690,14 +761,13 @@ function openProduct(code) {
                 <div class="col-md-5">
                     <div class="product-detail-gallery">
                         ${hasImg
-                            ? `<img src="${API.URL}${item.image}" onclick="openLightbox('${API.URL}${item.image}')" alt="">`
-                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:80px;color:#d1d5db;background:#f8f9fa;${Auth.isAdmin()?'cursor:pointer;':''}" ${Auth.isAdmin()?`onclick="triggerPhotoUpload()"`:''}><i class="ti ti-camera-plus"></i></div>`}
+                            ? `<img src="${API.imgUrl(item.image)}" onclick="openLightbox('${API.imgUrl(item.image)}')" alt="">`
+                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:80px;color:#d1d5db;background:#f8f9fa;cursor:pointer;" onclick="triggerPhotoUpload()"><i class="ti ti-camera-plus"></i></div>`}
                     </div>
-                    ${Auth.isAdmin() ? `
                     <div class="d-flex gap-2 mt-2">
                         <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="triggerPhotoUpload()"><i class="ti ti-camera"></i> ${hasImg ? 'Заменить' : 'Загрузить'}</button>
-                        ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
-                    </div>` : ''}
+                        ${hasImg && Auth.isAdmin() ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
+                    </div>
                 </div>
                 <div class="col-md-7">
                     <div class="text-muted mb-2" style="font-size:12px;">Код: ${item.item_code}</div>
@@ -737,6 +807,7 @@ function openProduct(code) {
                         <button class="btn btn-warning flex-fill" onclick="quickTransfer('${item.item_code}','${item.warehouse}')"><i class="ti ti-transfer"></i> Переместить</button>
                         <button class="btn btn-danger" onclick="confirmDelete('${item.item_code}','${escHtml(item.item_name)}')"><i class="ti ti-trash"></i></button>
                     </div>` : ''}
+                    <div id="item-audit"></div>
                 </div>
             </div>
 
@@ -755,6 +826,7 @@ function openProduct(code) {
 
     new bootstrap.Modal(document.getElementById('product-modal')).show();
     loadDetailHistory(code);
+    loadItemAudit(code, 'item-audit');
 }
 
 async function loadDetailHistory(code) {

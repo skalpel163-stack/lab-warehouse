@@ -9,6 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/brand.css">
+<style>
+    .table > :not(caption) > * > * { padding: 5px 8px; font-size: 12.5px; }
+    .table thead th { padding: 7px 8px; }
+</style>
 </head>
 <body>
 
@@ -27,7 +31,7 @@
                     <div class="text-muted">Товары выставленные на продажу</div>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-yellow admin-only" style="display:none;" onclick="openAddAvitoModal()">
+                    <button class="btn btn-yellow" onclick="openAddAvitoModal()">
                         <i class="ti ti-plus"></i> Добавить на Авито
                     </button>
                     <button class="btn btn-outline-primary" onclick="exportAvitoCSV()">
@@ -62,27 +66,19 @@
             <!-- Search -->
             <div class="card mb-3">
                 <div class="card-body p-2">
-                    <div class="row g-2 align-items-center">
-                        <div class="col">
-                            <input type="text" class="form-control" id="search" placeholder="Поиск..." oninput="debounceSearch()">
-                        </div>
-                        <div class="col-auto">
-                            <select class="form-select" id="sort-select" onchange="renderItems()">
-                                <option value="name">По названию</option>
-                                <option value="price-asc">Сначала дешёвые</option>
-                                <option value="price-desc">Сначала дорогие</option>
-                                <option value="qty-desc">По количеству</option>
-                            </select>
-                        </div>
-                    </div>
+                    <input type="text" class="form-control" id="search" placeholder="Поиск..." oninput="debounceSearch()">
                 </div>
             </div>
 
-            <!-- Grid view like catalog -->
-            <div class="row row-cards" id="avito-grid">
-                <div class="col-12 empty-state">
-                    <div class="icon"><i class="ti ti-package"></i></div>
-                    <p>Загрузка...</p>
+            <!-- Table view -->
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-vcenter table-hover">
+                        <thead id="items-thead"></thead>
+                        <tbody id="items-tbody">
+                            <tr><td colspan="10" class="text-center text-muted py-5">Загрузка...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -102,7 +98,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Добавить товар на Авито</h5>
+                <h5 class="modal-title">Добавить технику на Авито</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form onsubmit="submitAddAvito(event)">
@@ -111,7 +107,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label required">Название</label>
-                                <input type="text" class="form-control" id="aa-name" required placeholder="Двигатель Samsung...">
+                                <input type="text" class="form-control" id="aa-name" required placeholder="Стиральная машина Bosch...">
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -123,15 +119,15 @@
                         <div class="col-md-3">
                             <div class="mb-3">
                                 <label class="form-label required">Цена, ₽</label>
-                                <input type="number" class="form-control" id="aa-price" required placeholder="1500">
+                                <input type="number" class="form-control" id="aa-price" required placeholder="15000">
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Группа</label>
-                                <select class="form-select" id="aa-group"></select>
+                                <label class="form-label">Место хранения</label>
+                                <input type="text" class="form-control" id="aa-location" placeholder="Склад, гараж, квартира...">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -143,7 +139,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Примечание</label>
-                        <textarea class="form-control" id="aa-notes" rows="2" placeholder="Ссылка на объявление, описание..."></textarea>
+                        <textarea class="form-control" id="aa-notes" rows="2" placeholder="Состояние, описание, ссылка на объявление..."></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Фото</label>
@@ -215,7 +211,9 @@
 const currentUser = Auth.require();
 initNavbar('avito');
 
-if (Auth.isAdmin()) {
+function canManage() { return Auth.isAdmin() || (Auth.user && Auth.user.login === 'nebaikin'); }
+
+if (canManage()) {
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
 }
 
@@ -224,7 +222,21 @@ let avitoItems = [];
 let searchTimer = null;
 let currentDetailCode = null;
 
-document.addEventListener('DOMContentLoaded', loadData);
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('items-thead').innerHTML = `<tr>
+        <th style="width:36px;">№</th>
+        <th style="width:48px;">Фото</th>
+        <th>Название</th>
+        <th>Место хранения</th>
+        <th style="width:70px;">Кол-во</th>
+        <th style="width:100px;">Цена</th>
+        <th>Примечание</th>
+        <th style="width:100px;">Сумма</th>
+        <th>Ссылка</th>
+        ${canManage() ? `<th style="width:160px;" class="text-end">Действия</th>` : ''}
+    </tr>`;
+    loadData();
+});
 
 async function loadData() {
     try {
@@ -260,65 +272,53 @@ function debounceSearch() {
 
 function renderItems() {
     const search = (document.getElementById('search').value || '').toLowerCase();
-    const sort = document.getElementById('sort-select').value;
 
     let filtered = avitoItems.filter(i =>
         !search ||
         i.item_name.toLowerCase().includes(search) ||
         i.item_code.toLowerCase().includes(search) ||
+        (i.article && i.article.toLowerCase().includes(search)) ||
         (i.notes && i.notes.toLowerCase().includes(search))
     );
 
-    filtered.sort((a, b) => {
-        switch (sort) {
-            case 'price-asc': return a.valuation_rate - b.valuation_rate;
-            case 'price-desc': return b.valuation_rate - a.valuation_rate;
-            case 'qty-desc': return b.actual_qty - a.actual_qty;
-            default: return a.item_name.localeCompare(b.item_name, 'ru');
-        }
-    });
+    filtered.sort((a, b) => a.item_name.localeCompare(b.item_name, 'ru'));
 
-    const grid = document.getElementById('avito-grid');
+    const colCount = canManage() ? 10 : 9;
+    const tbody = document.getElementById('items-tbody');
     if (!filtered.length) {
-        grid.innerHTML = `<div class="col-12 empty-state">
-            <div class="icon"><i class="ti ti-shopping-cart-off"></i></div>
-            <p>${search ? 'Ничего не найдено' : 'Нет товаров на Авито'}</p>
-        </div>`;
+        tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center text-muted py-5">
+            <i class="ti ti-shopping-cart-off" style="font-size:48px;opacity:0.3;"></i>
+            <div class="mt-2">${search ? 'Ничего не найдено' : 'Нет товаров на Авито'}</div>
+        </td></tr>`;
         return;
     }
 
-    grid.innerHTML = filtered.map(item => {
-        const hasImg = !!item.image;
-        const img = hasImg
-            ? `<img src="${API.URL}${item.image}" class="product-img" alt="" loading="lazy">`
-            : `<div class="no-img"><i class="ti ti-photo"></i></div>`;
+    tbody.innerHTML = filtered.map((item, idx) => {
+        const img = item.image
+            ? `<img src="${API.imgUrl(item.image)}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="event.stopPropagation();openLightbox('${API.imgUrl(item.image)}')">`
+            : `<div style="width:36px;height:36px;background:var(--lr-bg-elevated);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--lr-text-muted);cursor:pointer;" onclick="event.stopPropagation();uploadPhotoFor('${item.item_code}')"><i class="ti ti-camera-plus"></i></div>`;
 
-        let badge = '';
-        if (item.actual_qty > 5) badge = `<div class="card-badge stock">В наличии</div>`;
-        else if (item.actual_qty > 0) badge = `<div class="card-badge few">Мало</div>`;
-
-        const seller = item.responsible ? `<div class="card-seller">${escHtml(item.responsible)}</div>` : '';
-        const canEdit = Auth.isAdmin();
+        const adminBtns = canManage() ? `
+            <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation();openAvitoWriteOff('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}','${item.warehouse}',${item.actual_qty})"><i class="ti ti-file-minus"></i> Продано</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();confirmDeleteAvito('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+        ` : '';
 
         return `
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="card product-card" onclick="openProduct('${item.item_code}')" style="position:relative;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
-                    <div style="position:relative;">
-                        ${img}
-                        ${badge}
-                        ${seller}
-                    </div>
-                    <div class="card-body">
-                        <div class="product-price">${formatPrice(item.valuation_rate)}</div>
-                        <div class="product-title">${escHtml(item.item_name)}</div>
-                        ${item.notes ? `<div class="product-note"><i class="ti ti-note"></i> ${escHtml(item.notes).substring(0, 60)}${item.notes.length > 60 ? '...' : ''}</div>` : ''}
-                        <div class="product-meta mt-2">
-                            <span>${item.actual_qty} шт.</span>
-                            <span>${getStatusText(item.warehouse)}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <tr style="cursor:pointer;" onclick="openProduct('${item.item_code}')">
+                <td style="color:var(--lr-text-muted);font-size:12px;text-align:center;">${idx + 1}</td>
+                <td onclick="event.stopPropagation()">${img}</td>
+                <td>
+                    <div style="font-weight:500;font-size:13px;">${escHtml(item.item_name)}</div>
+                    ${item.responsible ? `<div style="font-size:11px;color:var(--lr-text-muted);">${escHtml(item.responsible)}</div>` : ''}
+                </td>
+                <td onclick="event.stopPropagation()"><small class="editable-note" style="color:var(--lr-text-muted);cursor:pointer;" onclick="editLocation('${item.item_code}', this)" title="Нажмите чтобы редактировать">${item.locация ? escHtml(item.locация) : '<span style="opacity:0.4;">+ место</span>'}</small></td>
+                <td><span class="badge bg-green-lt">${item.actual_qty} шт.</span></td>
+                <td style="font-size:13px;">${formatPrice(item.valuation_rate)}</td>
+                <td onclick="event.stopPropagation()"><small class="editable-note" style="color:var(--lr-text-muted);cursor:pointer;" onclick="editNote('${item.item_code}', this)" title="Нажмите чтобы редактировать">${item.notes ? escHtml(item.notes).substring(0, 40) + (item.notes.length > 40 ? '...' : '') : '<span style="opacity:0.4;">+ заметка</span>'}</small></td>
+                <td style="font-size:13px;"><strong>${formatPrice(item.actual_qty * item.valuation_rate)}</strong></td>
+                <td onclick="event.stopPropagation()"><small class="editable-note" style="color:var(--lr-info);cursor:pointer;" onclick="editLink('${item.item_code}', this)" title="Нажмите чтобы редактировать">${item.link ? `<a href="${escHtml(item.link)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;"><i class="ti ti-external-link"></i> ссылка</a>` : '<span style="opacity:0.4;">+ ссылка</span>'}</small></td>
+                ${canManage() ? `<td class="text-end" onclick="event.stopPropagation()">${adminBtns}</td>` : ''}
+            </tr>
         `;
     }).join('');
 }
@@ -329,7 +329,7 @@ function openProduct(code) {
     if (!item) return;
     currentDetailCode = code;
     const hasImg = !!item.image;
-    const canEdit = Auth.isAdmin();
+    const canEdit = canManage();
 
     document.getElementById('product-modal-content').innerHTML = `
         <div class="modal-header">
@@ -341,14 +341,13 @@ function openProduct(code) {
                 <div class="col-md-5">
                     <div class="product-detail-gallery">
                         ${hasImg
-                            ? `<img src="${API.URL}${item.image}" onclick="openLightbox('${API.URL}${item.image}')">`
-                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:64px;color:var(--lr-text-muted);background:var(--lr-bg);${canEdit ? 'cursor:pointer;' : ''}" ${canEdit ? 'onclick="triggerPhotoUpload()"' : ''}><i class="ti ti-camera-plus"></i></div>`}
+                            ? `<img src="${API.imgUrl(item.image)}" onclick="openLightbox('${API.imgUrl(item.image)}')">`
+                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:64px;color:var(--lr-text-muted);background:var(--lr-bg);cursor:pointer;" onclick="triggerPhotoUpload()"><i class="ti ti-camera-plus"></i></div>`}
                     </div>
-                    ${canEdit ? `
                     <div class="d-flex gap-2 mt-2">
                         <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="triggerPhotoUpload()"><i class="ti ti-camera"></i> ${hasImg ? 'Заменить' : 'Загрузить'}</button>
-                        ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
-                    </div>` : ''}
+                        ${hasImg && canEdit ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
+                    </div>
                 </div>
                 <div class="col-md-7">
                     <div class="text-muted small mb-2">Код: ${item.item_code}</div>
@@ -367,21 +366,23 @@ function openProduct(code) {
                         <button class="btn btn-outline-warning flex-fill" onclick="openAvitoWriteOff('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}','${item.warehouse}',${item.actual_qty})"><i class="ti ti-file-minus"></i> Продано / Списать</button>
                         <button class="btn btn-danger" onclick="confirmDeleteAvito('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
                     </div>` : ''}
+                    <div id="item-audit"></div>
                 </div>
             </div>
         </div>
     `;
     new bootstrap.Modal(document.getElementById('product-modal')).show();
+    loadItemAudit(code, 'item-audit');
 }
 
 // ===== Add to Avito =====
 function openAddAvitoModal() {
     const s = getSettings();
-    document.getElementById('aa-group').innerHTML = s.groups.map(g => `<option value="${g}">${g}</option>`).join('');
     document.getElementById('aa-responsible').innerHTML = '<option value="">—</option>' + s.responsible.map(r => `<option value="${r}">${r}</option>`).join('');
     document.getElementById('aa-name').value = '';
     document.getElementById('aa-qty').value = 1;
     document.getElementById('aa-price').value = '';
+    document.getElementById('aa-location').value = '';
     document.getElementById('aa-notes').value = '';
     document.getElementById('aa-photo-preview').style.display = 'none';
     document.getElementById('aa-photo').value = '';
@@ -400,9 +401,9 @@ function previewAaPhoto(input) {
 async function submitAddAvito(e) {
     e.preventDefault();
     const name = document.getElementById('aa-name').value.trim();
-    const group = document.getElementById('aa-group').value;
     const qty = document.getElementById('aa-qty').value;
     const price = document.getElementById('aa-price').value;
+    const location = document.getElementById('aa-location').value.trim();
     const responsible = document.getElementById('aa-responsible').value;
     const notes = document.getElementById('aa-notes').value.trim();
     const photoFile = document.getElementById('aa-photo').files[0];
@@ -411,10 +412,10 @@ async function submitAddAvito(e) {
     try {
         toast('Создание...', '');
         const itemRes = await API.create('Item', {
-            item_code: code, item_name: name, item_group: group,
+            item_code: code, item_name: name, item_group: 'Запчасти',
             stock_uom: 'Nos', is_stock_item: 1,
             custom_notes: notes,
-            'custom_locация': 'АВИТО',
+            'custom_locация': location || 'АВИТО',
             custom_responsible: responsible || undefined
         });
         if (itemRes.exception) throw new Error(itemRes.exception);
@@ -478,7 +479,7 @@ async function submitAvitoWriteOff(e) {
 
 // ===== Delete =====
 function confirmDeleteAvito(code, name) {
-    if (!Auth.isAdmin()) return;
+    if (!canManage()) return;
     if (!confirm(`Удалить "${name}"?`)) return;
     performDelete(code);
 }
@@ -492,6 +493,62 @@ async function performDelete(code) {
         await loadData();
         toast('Удалено', 'success');
     } catch (e) { toast('Ошибка удаления', 'error'); }
+}
+
+// ===== Inline editing =====
+async function editNote(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.notes || '' : '';
+    const newNote = prompt('Примечание:', current);
+    if (newNote === null) return;
+    try {
+        await API.update('Item', code, { custom_notes: newNote.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) { toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error'); }
+}
+
+async function editMarking(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.article || '' : '';
+    const newVal = prompt('Маркировка:', current);
+    if (newVal === null) return;
+    try {
+        const meta = Meta.get(code) || {};
+        Meta.set(code, { ...meta, article: newVal.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) { toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error'); }
+}
+
+async function editLink(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.link || '' : '';
+    const newVal = prompt('Ссылка (URL):', current);
+    if (newVal === null) return;
+    try {
+        const meta = Meta.get(code) || {};
+        Meta.set(code, { ...meta, link: newVal.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) { toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error'); }
+}
+
+async function editLocation(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.locация || '' : '';
+    const newVal = prompt('Место хранения:', current);
+    if (newVal === null) return;
+    try {
+        await API.update('Item', code, { 'custom_locация': newVal.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) { toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error'); }
+}
+
+function uploadPhotoFor(code) {
+    currentDetailCode = code;
+    document.getElementById('detail-photo-input').click();
 }
 
 // ===== Photo =====

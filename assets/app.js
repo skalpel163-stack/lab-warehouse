@@ -168,6 +168,78 @@ function escHtml(s) {
     return d.innerHTML;
 }
 
+// ===== Item audit info (creation, modification) =====
+async function loadItemAudit(code, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '<div class="text-muted" style="font-size:12px;">Загрузка...</div>';
+    try {
+        const doc = await API.getDoc('Item', code);
+        const d = doc.data;
+        if (!d) { container.innerHTML = ''; return; }
+
+        const created = d.creation ? new Date(d.creation) : null;
+        const modified = d.modified ? new Date(d.modified) : null;
+        const owner = (d.owner || '').replace(/@.*/, '');
+        const modifiedBy = (d.modified_by || '').replace(/@.*/, '');
+
+        const fmtDt = (dt) => dt ? dt.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + dt.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'}) : '—';
+
+        // Get activity log / versions for change history
+        let changesHtml = '';
+        try {
+            const versions = await API.getList('Version',
+                ['name', 'creation', 'owner', 'data'],
+                [['ref_doctype', '=', 'Item'], ['docname', '=', code]],
+                10
+            );
+            const entries = (versions.message || []).reverse();
+            if (entries.length) {
+                const rows = entries.map(v => {
+                    const dt = new Date(v.creation);
+                    const who = (v.owner || '').replace(/@.*/, '');
+                    let what = '';
+                    try {
+                        const parsed = JSON.parse(v.data);
+                        if (parsed.changed && parsed.changed.length) {
+                            what = parsed.changed.map(c => {
+                                const field = c[0] || '';
+                                const label = field.replace('custom_', '').replace('_', ' ');
+                                return `<span style="color:var(--lr-info);">${escHtml(label)}</span>: ${escHtml(String(c[1]||'—').substring(0,30))} → ${escHtml(String(c[2]||'—').substring(0,30))}`;
+                            }).join('; ');
+                        }
+                    } catch(e) {}
+                    return `<tr>
+                        <td style="white-space:nowrap;">${fmtDt(dt)}</td>
+                        <td>${escHtml(who)}</td>
+                        <td style="font-size:11px;">${what || '—'}</td>
+                    </tr>`;
+                }).join('');
+                changesHtml = `
+                    <div style="margin-top:10px;">
+                        <div style="font-size:11px;font-weight:600;color:var(--lr-text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">История изменений</div>
+                        <table class="table table-sm" style="font-size:12px;">
+                            <thead><tr><th>Дата</th><th>Кто</th><th>Что изменено</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+            }
+        } catch(e) {}
+
+        container.innerHTML = `
+            <div style="background:var(--lr-bg);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--lr-text-secondary);margin-top:12px;">
+                <div style="display:flex;gap:24px;flex-wrap:wrap;">
+                    <div><span style="color:var(--lr-text-muted);">Создано:</span> ${fmtDt(created)} <span style="color:var(--lr-text-muted);">от</span> <strong>${escHtml(owner)}</strong></div>
+                    <div><span style="color:var(--lr-text-muted);">Изменено:</span> ${fmtDt(modified)} <span style="color:var(--lr-text-muted);">от</span> <strong>${escHtml(modifiedBy)}</strong></div>
+                </div>
+                ${changesHtml}
+            </div>
+        `;
+    } catch(e) {
+        container.innerHTML = '';
+    }
+}
+
 function toast(msg, type = '') {
     let t = document.getElementById('lr-toast');
     if (!t) {

@@ -33,6 +33,8 @@
         background: #00b848;
         color: #fff;
     }
+    .table > :not(caption) > * > * { padding: 5px 8px; font-size: 12.5px; }
+    .table thead th { padding: 7px 8px; }
     .drag-handle { width: 30px; }
     .drag-handle:hover { color: var(--lr-text) !important; }
     .drag-handle:active { cursor: grabbing !important; }
@@ -80,7 +82,10 @@
                     <button class="btn btn-outline-primary admin-only" style="display:none;" onclick="openGiveOutModal()">
                         <i class="ti ti-arrow-right"></i> Выдать со склада
                     </button>
-                    <button class="btn btn-outline-primary" onclick="exportMyCSV()">
+                    <button class="btn btn-outline-secondary" onclick="openWriteOffHistory()">
+                        <i class="ti ti-history"></i> История списаний
+                    </button>
+                    <button class="btn btn-outline-primary admin-only" style="display:none;" onclick="exportMyCSV()">
                         <i class="ti ti-download"></i> Экспорт
                     </button>
                 </div>
@@ -112,19 +117,7 @@
             <!-- Search -->
             <div class="card mb-3">
                 <div class="card-body p-2">
-                    <div class="row g-2 align-items-center">
-                        <div class="col">
-                            <input type="text" class="form-control" id="search" placeholder="Поиск по названию, артикулу..." oninput="debounceSearch()">
-                        </div>
-                        <div class="col-auto">
-                            <select class="form-select" id="sort-select" onchange="renderItems()">
-                                <option value="name">По названию</option>
-                                <option value="price-asc">Сначала дешёвые</option>
-                                <option value="price-desc">Сначала дорогие</option>
-                                <option value="qty-desc">По количеству</option>
-                            </select>
-                        </div>
-                    </div>
+                    <input type="text" class="form-control" id="search" placeholder="Поиск по названию, артикулу..." oninput="debounceSearch()">
                 </div>
             </div>
 
@@ -132,18 +125,7 @@
             <div class="card">
                 <div class="table-responsive">
                     <table class="table table-vcenter table-hover">
-                        <thead>
-                            <tr>
-                                <th style="width:30px;"></th>
-                                <th style="width:60px;">Фото</th>
-                                <th>Название</th>
-                                <th>Артикул</th>
-                                <th style="width:80px;">Кол-во</th>
-                                <th style="width:120px;">Цена</th>
-                                <th style="width:120px;">Сумма</th>
-                                <th style="width:140px;">Локация</th>
-                                <th style="width:220px;" class="text-end">Действия</th>
-                            </tr>
+                        <thead id="items-thead">
                         </thead>
                         <tbody id="items-tbody">
                             <tr><td colspan="8" class="text-center text-muted py-4">Загрузка...</td></tr>
@@ -241,6 +223,80 @@
                     <button type="submit" class="btn btn-yellow"><i class="ti ti-arrow-right"></i> Выдать</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit row modal (admin only) -->
+<div class="modal modal-blur fade" id="edit-row-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-edit me-2"></i>Редактирование</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitEditRow(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="er-code">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Название</label>
+                                <input type="text" class="form-control" id="er-name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Маркировка</label>
+                                <input type="text" class="form-control" id="er-article" placeholder="Артикул / код">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Цена, ₽</label>
+                                <input type="number" class="form-control" id="er-price" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Локация</label>
+                                <input type="text" class="form-control" id="er-location" placeholder="У мастера">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Ответственный</label>
+                                <input type="text" class="form-control" id="er-responsible" readonly style="background:var(--lr-bg);">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Примечание</label>
+                        <textarea class="form-control" id="er-notes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-yellow"><i class="ti ti-check"></i> Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Write-off history modal -->
+<div class="modal modal-blur fade" id="writeoff-history-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-history me-2"></i>История списаний</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="writeoff-history-body">
+                <div class="text-center text-muted py-4">Загрузка...</div>
+            </div>
         </div>
     </div>
 </div>
@@ -372,7 +428,24 @@ let writeOffCount = 0;
 let searchTimer = null;
 let currentDetailCode = null;
 
-document.addEventListener('DOMContentLoaded', loadData);
+document.addEventListener('DOMContentLoaded', () => {
+    // Render thead dynamically (so Auth.isAdmin() works)
+    document.getElementById('items-thead').innerHTML = `<tr>
+        <th style="width:30px;"></th>
+        <th style="width:36px;">№</th>
+        <th style="width:48px;">Фото</th>
+        <th>Название</th>
+        <th>Маркировка</th>
+        <th style="width:70px;">Кол-во</th>
+        <th style="width:100px;">Цена</th>
+        <th style="width:120px;">Локация</th>
+        <th>Примечание</th>
+        <th style="width:100px;">Сумма</th>
+        <th>Ссылка</th>
+        ${Auth.isAdmin() ? `<th style="width:200px;" class="text-end">Действия</th>` : ''}
+    </tr>`;
+    loadData();
+});
 
 async function loadData() {
     try {
@@ -402,7 +475,7 @@ function debounceSearch() {
 
 function renderItems() {
     const search = (document.getElementById('search').value || '').toLowerCase();
-    const sort = document.getElementById('sort-select').value;
+    const sort = 'name';
 
     let filtered = myItems.filter(i =>
         !search ||
@@ -427,21 +500,20 @@ function renderItems() {
 
     const tbody = document.getElementById('items-tbody');
     if (!filtered.length) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5">
+        tbody.innerHTML = `<tr><td colspan="${Auth.isAdmin() ? 12 : 11}" class="text-center text-muted py-5">
             <i class="ti ti-package-off" style="font-size:48px;opacity:0.3;"></i>
             <div class="mt-2">${search ? 'Ничего не найдено' : 'Подотчёт пуст'}</div>
         </td></tr>`;
         return;
     }
 
-    tbody.innerHTML = filtered.map(item => {
+    tbody.innerHTML = filtered.map((item, idx) => {
         const img = item.image
-            ? `<img src="${API.URL}${item.image}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;cursor:pointer;" onclick="event.stopPropagation();openLightbox('${API.URL}${item.image}')">`
-            : `<div style="width:48px;height:48px;background:#f1f3f5;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#adb5bd;"><i class="ti ti-photo"></i></div>`;
+            ? `<img src="${API.imgUrl(item.image)}" style="width:36px;height:36px;object-fit:cover;border-radius:5px;cursor:pointer;" onclick="event.stopPropagation();openLightbox('${API.imgUrl(item.image)}')">`
+            : `<div style="width:36px;height:36px;background:#f1f3f5;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#adb5bd;font-size:14px;cursor:pointer;" onclick="event.stopPropagation();uploadPhotoFor('${item.item_code}')" title="Загрузить фото"><i class="ti ti-camera-plus"></i></div>`;
 
-        // Admin-only buttons: edit, move to general stock, delete
         const adminBtns = Auth.isAdmin() ? `
-            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();openProduct('${item.item_code}')" title="Редактировать">
+            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();openEditRow('${item.item_code}')" title="Редактировать">
                 <i class="ti ti-edit"></i>
             </button>
             <button class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation();returnToStock('${item.item_code}','${item.warehouse}', ${item.actual_qty})" title="Вернуть на склад">
@@ -452,22 +524,25 @@ function renderItems() {
         return `
             <tr style="cursor:pointer;" data-code="${item.item_code}" onclick="openProduct('${item.item_code}')" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
                 <td class="drag-handle" onclick="event.stopPropagation()" style="cursor:grab;color:var(--lr-text-muted);text-align:center;"><i class="ti ti-grip-vertical"></i></td>
+                <td style="color:var(--lr-text-muted);font-size:12px;text-align:center;">${idx + 1}</td>
                 <td onclick="event.stopPropagation()">${img}</td>
                 <td>
-                    <div style="font-weight:500;">${escHtml(item.item_name)}</div>
-                    ${item.notes ? `<div class="small" style="color:#f59e0b;"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0, 50)}${item.notes.length > 50 ? '...' : ''}</div>` : `<div class="small text-muted">${item.item_code}</div>`}
+                    <div style="font-weight:500;font-size:13px;">${escHtml(item.item_name)}</div>
+                    ${item.notes ? `<div style="font-size:11px;color:#f59e0b;line-height:1.3;"><i class="ti ti-note" style="font-size:10px;"></i> ${escHtml(item.notes).substring(0, 50)}${item.notes.length > 50 ? '...' : ''}</div>` : ''}
                 </td>
-                <td><small class="text-muted">${item.article || '—'}</small></td>
+                <td onclick="event.stopPropagation()"><small class="editable-note" style="color:var(--lr-text-muted);cursor:pointer;" onclick="editMarking('${item.item_code}', this)" title="Нажмите чтобы редактировать">${item.article ? escHtml(item.article) : '<span style="opacity:0.4;">+ маркировка</span>'}</small></td>
                 <td><span class="badge bg-green-lt">${item.actual_qty} шт.</span></td>
-                <td>${formatPrice(item.valuation_rate)}</td>
-                <td><strong>${formatPrice(item.actual_qty * item.valuation_rate)}</strong></td>
+                <td style="font-size:13px;">${formatPrice(item.valuation_rate)}</td>
                 <td><small>${item.locация || '—'}</small></td>
-                <td class="text-end" onclick="event.stopPropagation()">
+                <td onclick="event.stopPropagation()"><small class="editable-note" style="color:var(--lr-text-muted);cursor:pointer;" onclick="editNote('${item.item_code}', this)" title="Нажмите чтобы редактировать">${item.notes ? escHtml(item.notes).substring(0, 40) + (item.notes.length > 40 ? '...' : '') : '<span style="opacity:0.4;">+ заметка</span>'}</small></td>
+                <td style="font-size:13px;"><strong>${formatPrice(item.actual_qty * item.valuation_rate)}</strong></td>
+                <td onclick="event.stopPropagation()"><small class="editable-note" style="color:var(--lr-info);cursor:pointer;" onclick="editLink('${item.item_code}', this)" title="Нажмите чтобы редактировать">${item.link ? `<a href="${escHtml(item.link)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;"><i class="ti ti-external-link"></i> ссылка</a>` : '<span style="opacity:0.4;">+ ссылка</span>'}</small></td>
+                ${Auth.isAdmin() ? `<td class="text-end" onclick="event.stopPropagation()">
                     ${adminBtns}
                     <button class="btn btn-sm btn-outline-danger" onclick="openQuickWriteOff('${item.item_code}', '${escHtml(item.item_name).replace(/'/g,"\\'")}', '${item.warehouse}', ${item.actual_qty}, ${item.valuation_rate})">
                         <i class="ti ti-file-minus"></i> Списать
                     </button>
-                </td>
+                </td>` : ''}
             </tr>
         `;
     }).join('');
@@ -611,6 +686,196 @@ async function submitGiveOut(e) {
     } catch (err) { toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error'); }
 }
 
+// ===== Edit note (all users) =====
+async function editNote(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.notes || '' : '';
+    const newNote = prompt('Примечание:', current);
+    if (newNote === null) return;
+    try {
+        await API.update('Item', code, { custom_notes: newNote.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) {
+        toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error');
+    }
+}
+
+// ===== Edit marking (all users) =====
+async function editMarking(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.article || '' : '';
+    const newVal = prompt('Маркировка:', current);
+    if (newVal === null) return;
+    try {
+        const meta = Meta.get(code) || {};
+        Meta.set(code, { ...meta, article: newVal.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) {
+        toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error');
+    }
+}
+
+// ===== Edit link (all users) =====
+async function editLink(code, el) {
+    const item = allItems.find(i => i.item_code === code);
+    const current = item ? item.link || '' : '';
+    const newVal = prompt('Ссылка (URL):', current);
+    if (newVal === null) return;
+    try {
+        const meta = Meta.get(code) || {};
+        Meta.set(code, { ...meta, link: newVal.trim() });
+        toast('Сохранено', 'success');
+        await loadData();
+    } catch (e) {
+        toast('Ошибка: ' + (e.message || '').substring(0, 40), 'error');
+    }
+}
+
+// ===== Edit row (admin) =====
+function openEditRow(code) {
+    if (!Auth.isAdmin()) return;
+    const item = allItems.find(i => i.item_code === code);
+    if (!item) return;
+    document.getElementById('er-code').value = code;
+    document.getElementById('er-name').value = item.item_name || '';
+    document.getElementById('er-article').value = item.article || '';
+    document.getElementById('er-price').value = item.valuation_rate || 0;
+    document.getElementById('er-location').value = item.locация || '';
+    document.getElementById('er-responsible').value = item.responsible || viewingMaster;
+    document.getElementById('er-notes').value = item.notes || '';
+    new bootstrap.Modal(document.getElementById('edit-row-modal')).show();
+}
+
+async function submitEditRow(e) {
+    e.preventDefault();
+    const code = document.getElementById('er-code').value;
+    const name = document.getElementById('er-name').value.trim();
+    const article = document.getElementById('er-article').value.trim();
+    const price = parseFloat(document.getElementById('er-price').value) || 0;
+    const location = document.getElementById('er-location').value.trim();
+    const notes = document.getElementById('er-notes').value.trim();
+
+    try {
+        toast('Сохранение...', '');
+
+        // Update ERPNext fields
+        await API.update('Item', code, {
+            item_name: name,
+            custom_notes: notes,
+            'custom_locация': location
+        });
+
+        // Update Meta (local) fields
+        const meta = Meta.get(code);
+        Meta.set(code, { ...meta, article });
+
+        // Update valuation_rate if changed
+        const item = allItems.find(i => i.item_code === code);
+        if (item && price !== item.valuation_rate) {
+            // Revalue: create a stock recon or update via stock entry
+            // Simplest: update Bin directly won't work, so we note the price in meta
+            Meta.set(code, { ...Meta.get(code), article, overridePrice: price });
+        }
+
+        toast('Сохранено!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('edit-row-modal')).hide();
+        await loadData();
+    } catch (err) {
+        toast('Ошибка: ' + (err.message || '').substring(0, 60), 'error');
+    }
+}
+
+// ===== Write-off history =====
+async function openWriteOffHistory() {
+    const modal = new bootstrap.Modal(document.getElementById('writeoff-history-modal'));
+    const body = document.getElementById('writeoff-history-body');
+    body.innerHTML = '<div class="text-center text-muted py-4">Загрузка...</div>';
+    modal.show();
+
+    try {
+        // Get all stock entries to Списан warehouse with remarks mentioning this master
+        const seRes = await API.getList('Stock Entry',
+            ['name', 'posting_date', 'posting_time', 'remarks', 'total_amount'],
+            [['to_warehouse', '=', 'Списан - L'], ['docstatus', '=', 1]],
+            500
+        );
+        const allEntries = seRes.message || [];
+
+        // Filter by master name in remarks
+        const masterEntries = allEntries.filter(e =>
+            e.remarks && e.remarks.includes(viewingMaster)
+        );
+
+        if (!masterEntries.length) {
+            body.innerHTML = '<div class="text-center text-muted py-4"><i class="ti ti-file-off" style="font-size:36px;opacity:0.3;"></i><div class="mt-2">Списаний пока нет</div></div>';
+            return;
+        }
+
+        // Fetch details for each entry (items)
+        const details = await Promise.all(masterEntries.map(async entry => {
+            try {
+                const d = await API.getDoc('Stock Entry', entry.name);
+                const items = (d.data?.items || []).map(i => ({
+                    name: i.item_name || i.item_code,
+                    qty: i.qty,
+                    rate: i.basic_rate || 0
+                }));
+                return { ...entry, items };
+            } catch (e) { return { ...entry, items: [] }; }
+        }));
+
+        // Sort by date descending
+        details.sort((a, b) => {
+            const da = `${a.posting_date} ${a.posting_time || ''}`;
+            const db = `${b.posting_date} ${b.posting_time || ''}`;
+            return db.localeCompare(da);
+        });
+
+        writeOffCount = details.length;
+        document.getElementById('stat-writeoff').textContent = writeOffCount;
+
+        body.innerHTML = `
+            <div class="text-muted small mb-2">Всего списаний: <strong>${details.length}</strong></div>
+            <table class="table table-vcenter table-hover" style="font-size:12.5px;">
+                <thead>
+                    <tr>
+                        <th style="width:36px;">№</th>
+                        <th style="width:100px;">Дата</th>
+                        <th>Запчасть</th>
+                        <th style="width:60px;">Кол-во</th>
+                        <th style="width:90px;">Сумма</th>
+                        <th>Комментарий</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${details.map((e, idx) => {
+                        const date = e.posting_date ? new Date(e.posting_date).toLocaleDateString('ru-RU') : '—';
+                        const time = e.posting_time ? e.posting_time.substring(0, 5) : '';
+                        const itemNames = e.items.map(i => `${escHtml(i.name)} (${i.qty} шт.)`).join(', ') || '—';
+                        const total = e.items.reduce((s, i) => s + i.qty * i.rate, 0);
+                        // Extract comment from remarks: "Заказ: #123 | comment | Мастер: ..."
+                        const comment = (e.remarks || '').replace(`| Мастер: ${viewingMaster}`, '').trim();
+                        return `
+                            <tr>
+                                <td style="color:var(--lr-text-muted);">${idx + 1}</td>
+                                <td><div>${date}</div><div class="text-muted" style="font-size:11px;">${time}</div></td>
+                                <td>${itemNames}</td>
+                                <td>${e.items.reduce((s, i) => s + i.qty, 0)} шт.</td>
+                                <td>${total ? formatPrice(total) : '—'}</td>
+                                <td><small class="text-muted">${escHtml(comment)}</small></td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (err) {
+        body.innerHTML = `<div class="text-center text-danger py-4">Ошибка загрузки: ${err.message}</div>`;
+    }
+}
+
 // ===== Export CSV =====
 function exportMyCSV() {
     if (!myItems.length) { toast('Нечего экспортировать', 'error'); return; }
@@ -643,11 +908,11 @@ function openProduct(code) {
             <button class="btn btn-danger" onclick="confirmDelete('${item.item_code}','${escHtml(item.item_name).replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
         </div>` : '';
 
-    const photoBtns = canEdit ? `
+    const photoBtns = `
         <div class="d-flex gap-2 mt-2">
             <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="triggerPhotoUpload()"><i class="ti ti-camera"></i> ${hasImg ? 'Заменить фото' : 'Загрузить фото'}</button>
-            ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
-        </div>` : '';
+            ${hasImg && canEdit ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentPhoto()"><i class="ti ti-trash"></i></button>` : ''}
+        </div>`;
 
     document.getElementById('product-modal-content').innerHTML = `
         <div class="modal-header">
@@ -659,8 +924,8 @@ function openProduct(code) {
                 <div class="col-md-5">
                     <div class="product-detail-gallery">
                         ${hasImg
-                            ? `<img src="${API.URL}${item.image}" onclick="openLightbox('${API.URL}${item.image}')" alt="">`
-                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:80px;color:#d1d5db;background:#f8f9fa;cursor:${canEdit?'pointer':'default'};" ${canEdit?`onclick="triggerPhotoUpload()"`:''}><i class="ti ti-camera-plus"></i></div>`}
+                            ? `<img src="${API.imgUrl(item.image)}" onclick="openLightbox('${API.imgUrl(item.image)}')" alt="">`
+                            : `<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:80px;color:#d1d5db;background:#f8f9fa;cursor:pointer;" onclick="triggerPhotoUpload()"><i class="ti ti-camera-plus"></i></div>`}
                     </div>
                     ${photoBtns}
                 </div>
@@ -681,11 +946,13 @@ function openProduct(code) {
                         ${item.notes ? `<tr><td class="text-muted">Примечание</td><td>${escHtml(item.notes)}</td></tr>` : ''}
                     </table>
                     ${adminActions}
+                    <div id="item-audit"></div>
                 </div>
             </div>
         </div>
     `;
     new bootstrap.Modal(document.getElementById('product-modal')).show();
+    loadItemAudit(code, 'item-audit');
 }
 
 // ===== Admin: Edit meta fields =====
@@ -753,6 +1020,11 @@ async function deleteCurrentPhoto() {
         await loadData();
         openProduct(currentDetailCode);
     } catch (e) { toast('Ошибка', 'error'); }
+}
+
+function uploadPhotoFor(code) {
+    currentDetailCode = code;
+    document.getElementById('detail-photo-input').click();
 }
 
 function openLightbox(url) {
