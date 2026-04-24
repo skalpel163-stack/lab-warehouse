@@ -149,13 +149,17 @@
 
                 <div class="toolbar">
                     <div class="text-muted" id="results-count">Загрузка...</div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 align-items-center">
                         <select class="form-select form-select-sm" id="sort-select" onchange="applyFilters()" style="width:auto;">
                             <option value="name">По названию</option>
                             <option value="price-asc">Сначала дешёвые</option>
                             <option value="price-desc">Сначала дорогие</option>
                             <option value="qty-desc">По количеству</option>
                         </select>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-icon" id="view-grid-btn" onclick="setViewMode('grid')" title="Карточки"><i class="ti ti-layout-grid"></i></button>
+                            <button class="btn btn-sm btn-icon" id="view-list-btn" onclick="setViewMode('list')" title="Список"><i class="ti ti-list"></i></button>
+                        </div>
                     </div>
                 </div>
 
@@ -385,6 +389,7 @@ let currentPage = 1;
 const PER_PAGE = 10;
 let currentCategory = '';
 let activeQuickFilter = 'all';
+let viewMode = localStorage.getItem('lr_viewMode') || 'grid';
 
 function setQuickFilter(filter, btn) {
     activeQuickFilter = filter;
@@ -410,6 +415,11 @@ if (Auth.isMaster()) {
 // Init
 document.addEventListener('DOMContentLoaded', () => {
     populateFormSelects();
+    // Init view mode buttons
+    document.getElementById('view-grid-btn').classList.toggle('btn-primary', viewMode === 'grid');
+    document.getElementById('view-grid-btn').classList.toggle('btn-outline-secondary', viewMode !== 'grid');
+    document.getElementById('view-list-btn').classList.toggle('btn-primary', viewMode === 'list');
+    document.getElementById('view-list-btn').classList.toggle('btn-outline-secondary', viewMode !== 'list');
     loadData();
 });
 
@@ -647,6 +657,16 @@ function renderPagination() {
     pag.innerHTML = html;
 }
 
+function setViewMode(mode) {
+    viewMode = mode;
+    localStorage.setItem('lr_viewMode', mode);
+    document.getElementById('view-grid-btn').classList.toggle('btn-primary', mode === 'grid');
+    document.getElementById('view-grid-btn').classList.toggle('btn-outline-secondary', mode !== 'grid');
+    document.getElementById('view-list-btn').classList.toggle('btn-primary', mode === 'list');
+    document.getElementById('view-list-btn').classList.toggle('btn-outline-secondary', mode !== 'list');
+    renderGrid();
+}
+
 function renderGrid() {
     const grid = document.getElementById('products-grid');
     if (filteredItems.length === 0) {
@@ -659,47 +679,76 @@ function renderGrid() {
     }
     const start = (currentPage - 1) * PER_PAGE;
     const pageItems = filteredItems.slice(start, start + PER_PAGE);
-    grid.innerHTML = pageItems.map(item => {
-        const hasImg = !!item.image;
-        const img = hasImg
-            ? `<img src="${API.imgUrl(item.image)}" class="product-img" alt="" loading="lazy">`
-            : `<div class="no-img"><i class="ti ti-photo"></i></div>`;
 
-        let badge = '';
-        if (item.actual_qty <= 0) badge = `<div class="card-badge out">Нет</div>`;
+    if (viewMode === 'list') {
+        grid.innerHTML = `<div class="col-12"><div class="table-responsive"><table class="table table-hover table-vcenter" style="font-size:13px;">
+            <thead><tr>
+                <th style="width:40px"></th>
+                <th>Название</th>
+                <th style="width:80px">Кол-во</th>
+                <th style="width:100px">Цена</th>
+                <th style="width:120px">Статус</th>
+                <th style="width:120px">Ответственный</th>
+                <th style="width:100px">Локация</th>
+            </tr></thead>
+            <tbody>${pageItems.map(item => {
+                const img = item.image
+                    ? `<img src="${API.imgUrl(item.image)}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" loading="lazy">`
+                    : `<div style="width:32px;height:32px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;"><i class="ti ti-photo" style="font-size:14px;color:#94a3b8;"></i></div>`;
+                return `<tr style="cursor:pointer;" onclick="openProduct('${item.item_code}')">
+                    <td>${img}</td>
+                    <td><div style="font-weight:500;">${escHtml(item.item_name)}</div>${item.notes ? `<div style="font-size:11px;color:var(--lr-text-muted);"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0,60)}${item.notes.length>60?'...':''}</div>`:''}</td>
+                    <td>${item.actual_qty} шт.</td>
+                    <td>${formatPrice(item.valuation_rate)}</td>
+                    <td>${getStatusText(item.warehouse)}</td>
+                    <td>${escHtml(item.responsible || '—')}</td>
+                    <td>${escHtml(item.locация || '—')}</td>
+                </tr>`;
+            }).join('')}</tbody>
+        </table></div></div>`;
+    } else {
+        grid.innerHTML = pageItems.map(item => {
+            const hasImg = !!item.image;
+            const img = hasImg
+                ? `<img src="${API.imgUrl(item.image)}" class="product-img" alt="" loading="lazy">`
+                : `<div class="no-img"><i class="ti ti-photo"></i></div>`;
 
-        const seller = item.responsible ? `<div class="card-seller">${escHtml(item.responsible)}</div>` : '';
-        const lowStock = item.minStock > 0 && item.actual_qty <= item.minStock
-            ? `<div class="low-stock-warn" title="Остаток ниже минимума">!</div>` : '';
+            let badge = '';
+            if (item.actual_qty <= 0) badge = `<div class="card-badge out">Нет</div>`;
 
-        const tags = [];
-        if (item.sourceType === 'Бесплатная') tags.push(`<span class="tag-pill" style="background:#dbeafe;color:#1e40af;">Бесплатная</span>`);
-        if (item._partTypes && item._partTypes[0]) tags.push(`<span class="tag-pill">${item._partTypes[0]}</span>`);
-        if (item._brands && item._brands[0]) tags.push(`<span class="tag-pill brand">${item._brands[0]}</span>`);
+            const seller = item.responsible ? `<div class="card-seller">${escHtml(item.responsible)}</div>` : '';
+            const lowStock = item.minStock > 0 && item.actual_qty <= item.minStock
+                ? `<div class="low-stock-warn" title="Остаток ниже минимума">!</div>` : '';
 
-        return `
-            <div class="col-6 col-md-4 col-lg-3">
-                <div class="card product-card" onclick="openProduct('${item.item_code}')" style="position:relative;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
-                    <div style="position:relative;">
-                        ${img}
-                        ${badge}
-                        ${seller}
-                        ${lowStock}
-                    </div>
-                    <div class="card-body">
-                        <div class="product-price">${formatPrice(item.valuation_rate)}</div>
-                        <div class="product-title">${escHtml(item.item_name)}</div>
-                        <div>${tags.join('')}</div>
-                        ${item.notes ? `<div class="product-note"><i class="ti ti-note"></i> ${escHtml(item.notes).substring(0, 60)}${item.notes.length > 60 ? '...' : ''}</div>` : ''}
-                        <div class="product-meta mt-2">
-                            <span>${item.actual_qty} шт.</span>
-                            <span>${getStatusText(item.warehouse)}</span>
+            const tags = [];
+            if (item.sourceType === 'Бесплатная') tags.push(`<span class="tag-pill" style="background:#dbeafe;color:#1e40af;">Бесплатная</span>`);
+            if (item._partTypes && item._partTypes[0]) tags.push(`<span class="tag-pill">${item._partTypes[0]}</span>`);
+            if (item._brands && item._brands[0]) tags.push(`<span class="tag-pill brand">${item._brands[0]}</span>`);
+
+            return `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card product-card" onclick="openProduct('${item.item_code}')" style="position:relative;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
+                        <div style="position:relative;">
+                            ${img}
+                            ${badge}
+                            ${seller}
+                            ${lowStock}
+                        </div>
+                        <div class="card-body">
+                            <div class="product-price">${formatPrice(item.valuation_rate)}</div>
+                            <div class="product-title">${escHtml(item.item_name)}</div>
+                            <div>${tags.join('')}</div>
+                            ${item.notes ? `<div class="product-note"><i class="ti ti-note"></i> ${escHtml(item.notes).substring(0, 60)}${item.notes.length > 60 ? '...' : ''}</div>` : ''}
+                            <div class="product-meta mt-2">
+                                <span>${item.actual_qty} шт.</span>
+                                <span>${getStatusText(item.warehouse)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
     renderPagination();
 }
 
