@@ -283,13 +283,27 @@ const BRAND_MODELS = {
 
 // Detect model from item text based on detected brands
 function detectModels(text, brands) {
-    const lower = (text || '').toLowerCase();
+    // Normalize: collapse multiple spaces, trim
+    const lower = (text || '').toLowerCase().replace(/\s+/g, ' ');
     const matches = [];
     for (const brand of (brands || [])) {
         const models = BRAND_MODELS[brand] || [];
-        for (const model of models) {
-            if (lower.includes(model.toLowerCase())) {
-                matches.push(model);
+        // Sort longest first to prefer longer matches (e.g. "SV11" over "V11")
+        const sorted = [...models].sort((a, b) => b.length - a.length);
+        for (const model of sorted) {
+            const ml = model.toLowerCase().replace(/\s+/g, ' ');
+            // For short models (<=3 chars), require word boundary
+            if (ml.length <= 3) {
+                const re = new RegExp('\\b' + ml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+                if (re.test(lower) && !matches.includes(model)) matches.push(model);
+            } else {
+                // Also try without spaces for model names like "1000 M" matching "1000M"
+                if ((lower.includes(ml) || lower.replace(/\s+/g, '').includes(ml.replace(/\s+/g, '')))
+                    && !matches.includes(model)) {
+                    // Check this isn't a substring of an already matched longer model
+                    const dominated = matches.some(m => m.toLowerCase().includes(ml));
+                    if (!dominated) matches.push(model);
+                }
             }
         }
     }
