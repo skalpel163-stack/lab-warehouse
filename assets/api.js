@@ -117,6 +117,7 @@ async function fetchWarehouseData() {
             item_group: item.item_group,
             _partTypes: meta.partTypes && meta.partTypes.length ? meta.partTypes : detectPartType(searchText),
             _brands: meta.brands && meta.brands.length ? meta.brands : detectBrands(searchText),
+            _models: [],
             _appliances: meta.appliances && meta.appliances.length ? meta.appliances : detectAppliances(searchText),
             article: meta.article || '',
             link: meta.link || '',

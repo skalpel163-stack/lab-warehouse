@@ -77,6 +77,11 @@
                     <div class="filter-body" id="filter-brand"></div>
                 </div>
 
+                <div class="filter-card" data-filter-card id="filter-model-card" style="display:none;">
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Модель <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-model"></div>
+                </div>
+
                 <div class="filter-card" data-filter-card>
                     <h5 class="filter-toggle" onclick="toggleFilter(this)">Тип техники <i class="ti ti-chevron-up"></i></h5>
                     <div class="filter-body" id="filter-appliance"></div>
@@ -427,6 +432,10 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadData() {
     try {
         allItems = await fetchWarehouseData();
+        // Detect models based on brands
+        allItems.forEach(item => {
+            item._models = detectModels(item.item_name + ' ' + (item.notes || '') + ' ' + (item.compatibility || ''), item._brands);
+        });
         updateStats(allItems);
         renderFilterLists();
         applyFilters();
@@ -468,6 +477,7 @@ function applyFilters() {
     const checkedStatus = getChecked('filter-status');
     const checkedPartType = getChecked('filter-parttype');
     const checkedBrand = getChecked('filter-brand');
+    const checkedModel = getChecked('filter-model');
     const checkedAppliance = getChecked('filter-appliance');
     const checkedResp = getChecked('filter-responsible');
     const checkedLoc = getChecked('filter-locations');
@@ -484,6 +494,7 @@ function applyFilters() {
         const matchStatus = !checkedStatus.length || checkedStatus.some(s => item.warehouse.includes(s));
         const matchPartType = !checkedPartType.length || checkedPartType.some(t => (item._partTypes || []).includes(t));
         const matchBrand = !checkedBrand.length || checkedBrand.some(b => (item._brands || []).includes(b));
+        const matchModel = !checkedModel.length || checkedModel.some(m => (item._models || []).includes(m));
         const matchAppliance = !checkedAppliance.length || checkedAppliance.some(a => (item._appliances || []).includes(a));
         const matchResp = !checkedResp.length || checkedResp.includes(item.responsible);
         const matchLoc = !checkedLoc.length || checkedLoc.includes(item.locация);
@@ -498,7 +509,7 @@ function applyFilters() {
         else if (activeQuickFilter === 'account') matchQuick = item.warehouse.includes('Подотчёт');
         else if (activeQuickFilter === 'free') matchQuick = item.sourceType === 'Бесплатная';
 
-        return matchQuick && matchSearch && matchSource && matchStatus && matchPartType && matchBrand && matchAppliance && matchResp && matchLoc && matchPrice && matchCat;
+        return matchQuick && matchSearch && matchSource && matchStatus && matchPartType && matchBrand && matchModel && matchAppliance && matchResp && matchLoc && matchPrice && matchCat;
     });
 
     filteredItems.sort((a, b) => {
@@ -600,6 +611,10 @@ function renderFilterLists() {
 
     renderFilterBlock('filter-parttype', countTags('_partTypes'), false);
     renderFilterBlock('filter-brand', countTags('_brands'), true);
+    // Wire brand checkboxes to update model filter on change
+    document.querySelectorAll('#filter-brand input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', updateModelFilter);
+    });
     renderFilterBlock('filter-appliance', countTags('_appliances'), true);
 
     // Locations
@@ -621,6 +636,39 @@ function renderFilterLists() {
 
     // Price slider — set max to actual max price
     initPriceSlider();
+}
+
+// ===== Cascading model filter =====
+function updateModelFilter() {
+    const checkedBrands = getChecked('filter-brand');
+    const card = document.getElementById('filter-model-card');
+
+    if (!checkedBrands.length) {
+        card.style.display = 'none';
+        document.getElementById('filter-model').innerHTML = '';
+        applyFilters();
+        return;
+    }
+
+    // Count models only for items matching selected brands
+    const counts = {};
+    allItems.forEach(item => {
+        if (!checkedBrands.some(b => (item._brands || []).includes(b))) return;
+        (item._models || []).forEach(m => { counts[m] = (counts[m] || 0) + 1; });
+    });
+
+    const modelItems = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+    if (!modelItems.length) {
+        card.style.display = 'none';
+        document.getElementById('filter-model').innerHTML = '';
+        applyFilters();
+        return;
+    }
+
+    card.style.display = '';
+    renderFilterBlock('filter-model', modelItems, modelItems.length > 8);
+    applyFilters();
 }
 
 // ===== Render grid =====

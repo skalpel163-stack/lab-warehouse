@@ -34,28 +34,54 @@ function renderNavbar(activePage = '') {
     const isAdmin = user.role === 'admin';
     const initial = user.name.charAt(0).toUpperCase();
 
-    // Menu items based on role
-    const menuItems = [];
-    menuItems.push({ id: 'catalog', href: 'index.html', label: 'Склад', icon: 'ti-package' });
-    menuItems.push({ id: 'avito', href: 'avito.html', label: 'Авито', icon: 'ti-shopping-cart' });
+    // Menu items based on role — main + overflow ("Ещё")
+    const mainItems = [];
+    const moreItems = [];
+
+    mainItems.push({ id: 'catalog', href: 'index.html', label: 'Склад', icon: 'ti-package' });
+    mainItems.push({ id: 'avito', href: 'avito.html', label: 'Авито', icon: 'ti-shopping-cart' });
 
     if (isAdmin) {
-        menuItems.push({ id: 'masters', href: 'masters.html', label: 'Мастера', icon: 'ti-users' });
-        menuItems.push({ id: 'vykup', href: 'vykup.html', label: 'Выкуп склад', icon: 'ti-cash' });
-        menuItems.push({ id: 'amway', href: 'amway.html', label: 'Amway', icon: 'ti-building-store' });
-        menuItems.push({ id: 'settings', href: 'settings.html', label: 'Настройки', icon: 'ti-settings' });
+        mainItems.push({ id: 'masters', href: 'masters.html', label: 'Мастера', icon: 'ti-users' });
+        mainItems.push({ id: 'vykup', href: 'vykup.html', label: 'Выкуп склад', icon: 'ti-cash' });
+        mainItems.push({ id: 'amway', href: 'amway.html', label: 'Amway', icon: 'ti-building-store' });
+        moreItems.push({ id: 'purchases', href: 'purchases.html', label: 'Закупка', icon: 'ti-shopping-cart' });
+        moreItems.push({ id: 'tech-details', href: 'tech-details.html', label: 'Детализация', icon: 'ti-cpu' });
+        moreItems.push({ id: 'suppliers', href: 'suppliers.html', label: 'Поставщики', icon: 'ti-truck' });
+        moreItems.push({ id: 'settings', href: 'settings.html', label: 'Настройки', icon: 'ti-settings' });
     } else {
-        menuItems.push({ id: 'my', href: 'my.html', label: 'Мой подотчёт', icon: 'ti-briefcase' });
+        mainItems.push({ id: 'my', href: 'my.html', label: 'Мой подотчёт', icon: 'ti-briefcase' });
+        mainItems.push({ id: 'purchases', href: 'purchases.html', label: 'Закупка', icon: 'ti-shopping-cart' });
         if (user.login === 'nebaikin') {
-            menuItems.push({ id: 'amway', href: 'amway.html', label: 'Amway', icon: 'ti-building-store' });
+            mainItems.push({ id: 'amway', href: 'amway.html', label: 'Amway', icon: 'ti-building-store' });
         }
+        moreItems.push({ id: 'tech-details', href: 'tech-details.html', label: 'Детализация', icon: 'ti-cpu' });
+        moreItems.push({ id: 'suppliers', href: 'suppliers.html', label: 'Поставщики', icon: 'ti-truck' });
     }
 
-    const menuHtml = menuItems.map(m => `
+    const mainHtml = mainItems.map(m => `
         <a class="nav-link ${activePage === m.id ? 'active' : ''}" href="${m.href}">
             <i class="ti ${m.icon} me-1"></i>${m.label}
         </a>
     `).join('');
+
+    const moreActive = moreItems.some(m => m.id === activePage);
+    const moreDropdownHtml = moreItems.length ? `
+        <div class="nav-item dropdown">
+            <a class="nav-link ${moreActive ? 'active' : ''}" href="#" data-bs-toggle="dropdown">
+                <i class="ti ti-dots me-1"></i>Ещё<span id="nav-purchases-badge" class="badge bg-danger ms-1" style="display:none;font-size:10px;"></span>
+            </a>
+            <div class="dropdown-menu">
+                ${moreItems.map(m => `
+                    <a class="dropdown-item ${activePage === m.id ? 'active' : ''}" href="${m.href}">
+                        <i class="ti ${m.icon} me-2"></i>${m.label}${m.id === 'purchases' ? '<span id="nav-purchases-badge-inner" class="badge bg-danger ms-1" style="display:none;font-size:10px;"></span>' : ''}
+                    </a>
+                `).join('')}
+            </div>
+        </div>
+    ` : '';
+
+    const menuHtml = mainHtml + moreDropdownHtml;
 
     const addButton = isAdmin
         ? `<button class="btn btn-yellow" onclick="openAddModal && openAddModal()">
@@ -131,5 +157,24 @@ function initNavbar(activePage = '') {
     document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('navbar-slot');
         if (container) container.innerHTML = renderNavbar(activePage);
+        // Load purchase request badge (for admin)
+        loadPurchaseBadge();
     });
+}
+
+// Load new purchase requests count for badge
+async function loadPurchaseBadge() {
+    const u = Auth.user;
+    if (!u) return;
+    try {
+        const res = await (typeof API !== 'undefined' ? API : { getList: () => ({ message: [] }) })
+            .getList('Note', ['title'], [['title', 'like', 'ZAK|new|%']], 100);
+        const count = (res.message || []).length;
+        if (count > 0) {
+            const badge = document.getElementById('nav-purchases-badge');
+            const badgeInner = document.getElementById('nav-purchases-badge-inner');
+            if (badge) { badge.textContent = count; badge.style.display = 'inline'; }
+            if (badgeInner) { badgeInner.textContent = count; badgeInner.style.display = 'inline'; }
+        }
+    } catch(e) {}
 }

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Закупка — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+    .req-card {
+        border: 1px solid var(--lr-border, #dee2e6); border-radius: 12px;
+        padding: 20px; background: var(--lr-bg, #fff); margin-bottom: 12px;
+        transition: all .15s; position: relative;
+    }
+    .req-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .req-card-new { border-left: 4px solid #ff9800; }
+    .req-card-done { border-left: 4px solid #00c853; opacity: .7; }
+    .req-card-rejected { border-left: 4px solid #e53935; opacity: .6; }
+    .req-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .req-item { font-size: 16px; font-weight: 700; color: var(--lr-text, #001a34); }
+    .req-meta { font-size: 12px; color: var(--lr-text-muted, #868e96); margin-top: 4px; }
+    .req-comment { font-size: 13px; margin-top: 8px; padding: 8px 12px; background: var(--lr-bg-secondary, #f8f9fa); border-radius: 6px; }
+    .req-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .req-badge-new { background: #fff3e0; color: #e65100; }
+    .req-badge-done { background: #e6f9ed; color: #00c853; }
+    .req-badge-rejected { background: #fce4ec; color: #c62828; }
+    .req-badge-urgent { background: #fce4ec; color: #e53935; }
+    .req-admin-response { font-size: 13px; margin-top: 8px; padding: 8px 12px; background: #e6f9ed; border-radius: 6px; border-left: 3px solid #00c853; }
+    .req-actions { display: flex; gap: 6px; margin-top: 12px; }
+    .req-empty { text-align: center; padding: 60px 20px; color: var(--lr-text-muted, #868e96); }
+    .req-empty i { font-size: 48px; display: block; margin-bottom: 12px; opacity: .4; }
+    .req-stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .req-stat { padding: 12px 20px; border-radius: 10px; background: var(--lr-bg, #fff); border: 1px solid var(--lr-border, #dee2e6); text-align: center; min-width: 100px; }
+    .req-stat-value { font-size: 24px; font-weight: 700; }
+    .req-stat-label { font-size: 12px; color: var(--lr-text-muted, #868e96); }
+    .filter-tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-tabs .btn { font-size: 13px; }
+
+    .form-card { background: var(--lr-bg, #fff); border: 1px solid var(--lr-border, #dee2e6); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .form-card h3 { margin: 0 0 16px; font-size: 18px; }
+    .form-card label { font-size: 13px; font-weight: 600; color: var(--lr-text-muted, #868e96); margin-bottom: 4px; }
+
+    /* Modal */
+    .td-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .td-modal { background: var(--lr-bg, #fff); border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .td-modal h3 { margin: 0 0 16px; font-size: 18px; }
+    .td-modal label { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: block; color: var(--lr-text-muted, #868e96); }
+    .td-modal .form-control, .td-modal textarea { margin-bottom: 12px; }
+    .td-modal textarea { min-height: 80px; resize: vertical; }
+    .td-modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="mb-0"><i class="ti ti-shopping-cart me-2" style="color:#00c853;"></i>Закупка</h2>
+                    <div class="text-muted mt-1" id="page-subtitle"></div>
+                </div>
+                <button class="btn btn-primary" onclick="showNewRequestForm()">
+                    <i class="ti ti-plus me-1"></i>Новая заявка
+                </button>
+            </div>
+
+            <!-- Stats (admin) -->
+            <div class="req-stats" id="req-stats"></div>
+
+            <!-- Filter tabs -->
+            <div class="filter-tabs" id="filter-tabs"></div>
+
+            <!-- Request list -->
+            <div id="req-list">
+                <div class="text-center py-5 text-muted"><i class="ti ti-loader ti-spin"></i> Загрузка...</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script src="assets/auth.js"></script>
+<script src="assets/api.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+initNavbar('purchases');
+
+const user = Auth.require();
+const isAdmin = user && user.role === 'admin';
+
+// ========================================
+// Data — stored as ERPNext Note documents
+// Title format: "ZAK|status|master|date|urgency"
+// Content: JSON {item, qty, comment, adminComment}
+// ========================================
+
+let allRequests = [];
+let activeFilter = 'all';
+
+async function loadRequests() {
+    try {
+        const res = await API.getList('Note',
+            ['name', 'title', 'content', 'creation', 'modified'],
+            [['title', 'like', 'ZAK|%']],
+            500
+        );
+        const notes = res.message || [];
+        allRequests = notes.map(parseNote).filter(Boolean).sort((a, b) => new Date(b.creation) - new Date(a.creation));
+    } catch(e) {
+        console.error('Failed to load requests:', e);
+        allRequests = [];
+    }
+    renderAll();
+}
+
+function parseNote(note) {
+    try {
+        const parts = note.title.split('|');
+        if (parts[0] !== 'ZAK') return null;
+        let data = {};
+        try { data = JSON.parse(note.content || '{}'); } catch(e) {}
+        return {
+            name: note.name,
+            status: parts[1] || 'new',
+            master: parts[2] || '',
+            date: parts[3] || '',
+            urgency: parts[4] || 'normal',
+            item: data.item || '',
+            qty: data.qty || '',
+            comment: data.comment || '',
+            adminComment: data.adminComment || '',
+            creation: note.creation
+        };
+    } catch(e) { return null; }
+}
+
+function buildTitle(req) {
+    return `ZAK|${req.status}|${req.master}|${req.date}|${req.urgency}`;
+}
+
+function buildContent(req) {
+    return JSON.stringify({ item: req.item, qty: req.qty, comment: req.comment, adminComment: req.adminComment });
+}
+
+// ========================================
+// Create request
+// ========================================
+function showNewRequestForm() {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+    <div class="td-modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="td-modal">
+            <h3><i class="ti ti-shopping-cart me-2" style="color:#00c853;"></i>Новая заявка на закупку</h3>
+            <div style="padding:8px 12px;background:var(--lr-bg-secondary,#f8f9fa);border-radius:6px;margin-bottom:16px;font-size:13px;">
+                <i class="ti ti-user me-1"></i>Заявку подаёт: <strong>${esc(user.name)}</strong>
+            </div>
+            <label>Что нужно купить <span style="color:red">*</span></label>
+            <input type="text" class="form-control" id="req-item" placeholder="Название или ссылка — расходник, з/ч которую нужно купить на подотчёт">
+            <label>Количество</label>
+            <input type="text" class="form-control" id="req-qty" placeholder="1 шт, 2 м, и т.д.">
+            <label>Комментарий / Зачем нужно</label>
+            <textarea class="form-control" id="req-comment" placeholder="Комментарий..."></textarea>
+            <label>Срочность</label>
+            <select class="form-control" id="req-urgency" style="margin-bottom:12px;">
+                <option value="normal">Обычная</option>
+                <option value="urgent">Срочная</option>
+            </select>
+            <div class="td-modal-footer">
+                <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="submitRequest()"><i class="ti ti-send me-1"></i>Отправить</button>
+            </div>
+        </div>
+    </div>`;
+    document.getElementById('req-item').focus();
+}
+
+async function submitRequest() {
+    const item = document.getElementById('req-item').value.trim();
+    if (!item) { alert('Укажите что нужно купить'); return; }
+
+    const qty = document.getElementById('req-qty').value.trim();
+    const comment = document.getElementById('req-comment').value.trim();
+    const urgency = document.getElementById('req-urgency').value;
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10);
+
+    const req = {
+        status: 'new',
+        master: user.name,
+        date: date,
+        urgency: urgency,
+        item: item,
+        qty: qty,
+        comment: comment,
+        adminComment: ''
+    };
+
+    const saveBtn = document.querySelector('#modal-root .btn-primary');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="ti ti-loader ti-spin me-1"></i>Отправка...'; }
+
+    try {
+        await API.create('Note', {
+            title: buildTitle(req),
+            content: buildContent(req),
+            public: 1
+        });
+        closeModal();
+        await loadRequests();
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="ti ti-send me-1"></i>Отправить'; }
+    }
+}
+
+// ========================================
+// Admin actions
+// ========================================
+async function markDone(name) {
+    const req = allRequests.find(r => r.name === name);
+    if (!req) return;
+
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+    <div class="td-modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="td-modal">
+            <h3><i class="ti ti-check me-2" style="color:#00c853;"></i>Отметить как куплено</h3>
+            <p><strong>${esc(req.item)}</strong></p>
+            <label>Комментарий (необязательно)</label>
+            <textarea class="form-control" id="admin-comment" placeholder="Куплено на Ali, будет через неделю..."></textarea>
+            <div class="td-modal-footer">
+                <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-success" onclick="confirmMarkDone('${esc(name)}')"><i class="ti ti-check me-1"></i>Куплено</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function confirmMarkDone(name) {
+    const req = allRequests.find(r => r.name === name);
+    if (!req) return;
+    const adminComment = document.getElementById('admin-comment').value.trim();
+    req.status = 'done';
+    req.adminComment = adminComment;
+    try {
+        await API.update('Note', name, { title: buildTitle(req), content: buildContent(req) });
+        closeModal();
+        await loadRequests();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function markRejected(name) {
+    const req = allRequests.find(r => r.name === name);
+    if (!req) return;
+
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+    <div class="td-modal-bg" onclick="if(event.target===this)closeModal()">
+        <div class="td-modal">
+            <h3><i class="ti ti-x me-2" style="color:#e53935;"></i>Отклонить заявку</h3>
+            <p><strong>${esc(req.item)}</strong> от ${esc(req.master)}</p>
+            <label>Причина отклонения</label>
+            <textarea class="form-control" id="admin-comment" placeholder="Нет в наличии у поставщиков..."></textarea>
+            <div class="td-modal-footer">
+                <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-danger" onclick="confirmReject('${esc(name)}')"><i class="ti ti-x me-1"></i>Отклонить</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function confirmReject(name) {
+    const req = allRequests.find(r => r.name === name);
+    if (!req) return;
+    const adminComment = document.getElementById('admin-comment').value.trim();
+    req.status = 'rejected';
+    req.adminComment = adminComment;
+    try {
+        await API.update('Note', name, { title: buildTitle(req), content: buildContent(req) });
+        closeModal();
+        await loadRequests();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+async function deleteRequest(name) {
+    if (!confirm('Удалить заявку?')) return;
+    try {
+        await API.remove('Note', name);
+        await loadRequests();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+}
+
+// ========================================
+// Render
+// ========================================
+function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+function getFiltered() {
+    let list = allRequests;
+    // Masters see only their own
+    if (!isAdmin) list = list.filter(r => r.master === user.name);
+    if (activeFilter === 'new') return list.filter(r => r.status === 'new');
+    if (activeFilter === 'done') return list.filter(r => r.status === 'done');
+    if (activeFilter === 'rejected') return list.filter(r => r.status === 'rejected');
+    return list;
+}
+
+function renderAll() {
+    renderStats();
+    renderFilters();
+    renderList();
+}
+
+function renderStats() {
+    const el = document.getElementById('req-stats');
+    const visible = isAdmin ? allRequests : allRequests.filter(r => r.master === user.name);
+    const newCount = visible.filter(r => r.status === 'new').length;
+    const doneCount = visible.filter(r => r.status === 'done').length;
+    const rejCount = visible.filter(r => r.status === 'rejected').length;
+
+    document.getElementById('page-subtitle').textContent = isAdmin
+        ? 'Заявки от мастеров на закупку запчастей и расходников'
+        : 'Ваши заявки на закупку';
+
+    el.innerHTML = `
+        <div class="req-stat"><div class="req-stat-value" style="color:#ff9800;">${newCount}</div><div class="req-stat-label">Новые</div></div>
+        <div class="req-stat"><div class="req-stat-value" style="color:#00c853;">${doneCount}</div><div class="req-stat-label">Куплено</div></div>
+        <div class="req-stat"><div class="req-stat-value" style="color:#e53935;">${rejCount}</div><div class="req-stat-label">Отклонено</div></div>
+        <div class="req-stat"><div class="req-stat-value">${visible.length}</div><div class="req-stat-label">Всего</div></div>
+    `;
+}
+
+function renderFilters() {
+    const el = document.getElementById('filter-tabs');
+    const filters = [
+        { id: 'all', label: 'Все' },
+        { id: 'new', label: 'Новые' },
+        { id: 'done', label: 'Куплено' },
+        { id: 'rejected', label: 'Отклонено' }
+    ];
+    el.innerHTML = filters.map(f =>
+        `<button class="btn btn-sm ${activeFilter === f.id ? 'btn-primary' : 'btn-outline-secondary'}" onclick="setFilter('${f.id}')">${f.label}</button>`
+    ).join('');
+}
+
+function setFilter(f) { activeFilter = f; renderAll(); }
+
+function renderList() {
+    const data = getFiltered();
+    const el = document.getElementById('req-list');
+
+    if (data.length === 0) {
+        el.innerHTML = `<div class="req-empty"><i class="ti ti-shopping-cart-off"></i>Заявок нет</div>`;
+        return;
+    }
+
+    el.innerHTML = data.map(r => {
+        const statusClass = r.status === 'done' ? 'req-card-done' : r.status === 'rejected' ? 'req-card-rejected' : 'req-card-new';
+        const statusBadge = r.status === 'done'
+            ? '<span class="req-badge req-badge-done">Куплено</span>'
+            : r.status === 'rejected'
+            ? '<span class="req-badge req-badge-rejected">Отклонено</span>'
+            : '<span class="req-badge req-badge-new">Новая</span>';
+        const urgentBadge = r.urgency === 'urgent' ? ' <span class="req-badge req-badge-urgent"><i class="ti ti-flame"></i> Срочная</span>' : '';
+
+        let html = `<div class="req-card ${statusClass}">`;
+        html += `<div class="req-header"><div>`;
+        html += `<div class="req-item">${esc(r.item)}</div>`;
+        html += `<div class="req-meta">`;
+        html += `<i class="ti ti-user me-1"></i>${esc(r.master)}`;
+        html += ` &middot; <i class="ti ti-calendar me-1"></i>${esc(r.date)}`;
+        if (r.qty) html += ` &middot; <i class="ti ti-package me-1"></i>${esc(r.qty)}`;
+        html += `</div>`;
+        html += `</div><div class="d-flex gap-1">${statusBadge}${urgentBadge}</div></div>`;
+
+        if (r.comment) {
+            html += `<div class="req-comment"><i class="ti ti-message me-1"></i>${esc(r.comment)}</div>`;
+        }
+
+        if (r.adminComment) {
+            html += `<div class="req-admin-response"><i class="ti ti-user-check me-1"></i><strong>Ответ:</strong> ${esc(r.adminComment)}</div>`;
+        }
+
+        // Admin actions
+        if (isAdmin && r.status === 'new') {
+            html += `<div class="req-actions">
+                <button class="btn btn-sm btn-success" onclick="markDone('${esc(r.name)}')"><i class="ti ti-check me-1"></i>Куплено</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="markRejected('${esc(r.name)}')"><i class="ti ti-x me-1"></i>Отклонить</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="deleteRequest('${esc(r.name)}')"><i class="ti ti-trash"></i></button>
+            </div>`;
+        }
+
+        // Master can delete own new requests
+        if (!isAdmin && r.status === 'new' && r.master === user.name) {
+            html += `<div class="req-actions">
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteRequest('${esc(r.name)}')"><i class="ti ti-trash me-1"></i>Удалить</button>
+            </div>`;
+        }
+
+        html += '</div>';
+        return html;
+    }).join('');
+}
+
+// ========================================
+// Init
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    if (!user) return;
+    loadRequests();
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+</body>
+</html>

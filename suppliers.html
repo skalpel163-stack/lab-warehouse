@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Поставщики — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+    .sup-card {
+        border: 1px solid var(--lr-border, #dee2e6); border-radius: 12px;
+        padding: 20px; background: var(--lr-bg, #fff); position: relative;
+        transition: all .15s;
+    }
+    .sup-card:hover { border-color: var(--lr-accent, #00c853); box-shadow: 0 4px 12px rgba(0,200,83,.1); }
+    .sup-card-name { font-size: 16px; font-weight: 700; color: var(--lr-text, #001a34); margin-bottom: 4px; word-break: break-all; }
+    .sup-card-name a { color: var(--lr-accent, #00c853); text-decoration: none; }
+    .sup-card-name a:hover { text-decoration: underline; }
+    .sup-card-cat { display: inline-block; padding: 2px 8px; border-radius: 4px; background: var(--lr-bg-secondary, #f1f3f5); font-size: 12px; color: var(--lr-text-muted, #868e96); margin-bottom: 8px; }
+    .sup-card-row { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 0; color: var(--lr-text, #001a34); }
+    .sup-card-row i { color: var(--lr-accent, #00c853); width: 18px; text-align: center; flex-shrink: 0; }
+    .sup-card-row .label { color: var(--lr-text-muted, #868e96); min-width: 70px; font-size: 12px; }
+    .sup-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .sup-badge-partner { background: #e6f9ed; color: #00c853; }
+    .sup-badge-discount { background: #fff3e0; color: #e65100; }
+    .sup-pwd { font-family: monospace; background: var(--lr-bg-secondary, #f1f3f5); padding: 1px 6px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+    .sup-pwd-hidden { letter-spacing: 2px; }
+
+    .sup-actions { position: absolute; top: 12px; right: 12px; display: none; gap: 4px; }
+    .sup-card:hover .sup-actions { display: flex; }
+    .sup-actions .btn { padding: 2px 6px; font-size: 12px; }
+
+    .sup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+    .sup-add-card {
+        border: 2px dashed var(--lr-border, #dee2e6); border-radius: 12px;
+        padding: 40px 20px; text-align: center; cursor: pointer; opacity: .6;
+        transition: all .15s;
+    }
+    .sup-add-card:hover { opacity: 1; border-color: var(--lr-accent, #00c853); }
+    .sup-add-card i { font-size: 32px; color: var(--lr-text-muted, #868e96); }
+
+    .search-box { max-width: 400px; }
+
+    /* Modal */
+    .td-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .td-modal { background: var(--lr-bg, #fff); border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .td-modal h3 { margin: 0 0 16px; font-size: 18px; }
+    .td-modal label { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: block; color: var(--lr-text-muted, #868e96); }
+    .td-modal .form-control { margin-bottom: 12px; }
+    .td-modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="mb-0"><i class="ti ti-truck me-2" style="color:#00c853;"></i>Поставщики</h2>
+                    <div class="text-muted mt-1" id="sup-count"></div>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="input-icon search-box">
+                        <span class="input-icon-addon"><i class="ti ti-search"></i></span>
+                        <input type="text" class="form-control" id="sup-search" placeholder="Поиск..." oninput="renderSuppliers()">
+                    </div>
+                    <button class="btn btn-primary" onclick="addSupplier()"><i class="ti ti-plus me-1"></i>Добавить</button>
+                </div>
+            </div>
+
+            <!-- Category filters -->
+            <div class="d-flex flex-wrap gap-1 mb-3" id="cat-filters"></div>
+
+            <div id="sup-content"></div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+initNavbar('suppliers');
+
+// ========================================
+// Default data
+// ========================================
+const DEFAULT_SUPPLIERS = [
+    {
+        id: 1, name: 'service-cm.ru', url: 'http://service-cm.ru/',
+        category: 'зч кофемашины', discount: '7%', comment: '',
+        cooperation: 'Партнер', account: 'zip@labremonta.ru', password: '',
+        phone: '8 (800) 555 07 91'
+    },
+    {
+        id: 2, name: 'nbdoc.ru', url: 'https://nbdoc.ru/',
+        category: 'dyson / акб', discount: 'опт цена', comment: '',
+        cooperation: 'Партнер', account: 'zip@labremonta.ru', password: '',
+        phone: '8(495)2601885'
+    },
+    {
+        id: 3, name: 'Митино павильон 25', url: '',
+        category: 'двигатели пылесосов', discount: '10%', comment: '',
+        cooperation: 'Партнер', account: '+79122719238', password: '',
+        phone: '7 916 551-51-72'
+    },
+    {
+        id: 4, name: 'partdirects', url: '',
+        category: 'ноутбуки / акб / бытовуха', discount: 'опт', comment: '',
+        cooperation: 'Партнер', account: 'zip@labremonta.ru', password: '9R6dvw',
+        phone: '89610044424'
+    },
+    {
+        id: 5, name: 'expert-cm.ru', url: 'https://expert-cm.ru/',
+        category: 'зч кофемашины', discount: '5%', comment: '',
+        cooperation: 'Партнер', account: 'zip@labremonta.ru', password: 'qqq123123',
+        phone: '84952920530'
+    },
+    {
+        id: 6, name: 'Официал КитченЭйд (ООО Трапеза)', url: '',
+        category: 'зч китченейд', discount: '—', comment: '',
+        cooperation: '', account: '', password: '',
+        phone: '8903 149-56-42'
+    },
+    {
+        id: 7, name: 'ibatt.ru', url: 'http://www.ibatt.ru/',
+        category: 'Акб Dyson / роботы', discount: '10%', comment: '',
+        cooperation: 'Партнер', account: 'zip@labremonta.ru', password: 'qqq123123',
+        phone: '8800-555-24-76'
+    },
+    {
+        id: 8, name: 'seltop.ru', url: 'https://seltop.ru/',
+        category: '', discount: '', comment: '',
+        cooperation: '', account: '9122718238', password: '596b498n',
+        phone: '9122718238'
+    }
+];
+
+// ========================================
+// Persistence
+// ========================================
+const STORAGE_KEY = 'lr_suppliers';
+let suppliers = [];
+let activeCat = 'all';
+
+function loadSuppliers() {
+    try {
+        const s = localStorage.getItem(STORAGE_KEY);
+        if (s) return JSON.parse(s);
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_SUPPLIERS));
+}
+
+function saveSuppliers() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(suppliers));
+}
+
+function nextId() {
+    return suppliers.length ? Math.max(...suppliers.map(s => s.id)) + 1 : 1;
+}
+
+// ========================================
+// Modal
+// ========================================
+function showModal(title, fields, onSave) {
+    const root = document.getElementById('modal-root');
+    let html = `<div class="td-modal-bg" onclick="if(event.target===this)closeModal()"><div class="td-modal"><h3>${esc(title)}</h3>`;
+    fields.forEach(f => {
+        html += `<label>${esc(f.label)}</label>`;
+        html += `<input type="${f.inputType || 'text'}" class="form-control" id="modal-${f.id}" value="${esc(f.value || '')}" placeholder="${esc(f.placeholder || '')}">`;
+    });
+    html += `<div class="td-modal-footer">
+        <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+        <button class="btn btn-primary" id="modal-save-btn">Сохранить</button>
+    </div></div></div>`;
+    root.innerHTML = html;
+    document.getElementById('modal-save-btn').onclick = () => {
+        const values = {};
+        fields.forEach(f => { values[f.id] = document.getElementById('modal-' + f.id).value.trim(); });
+        onSave(values);
+        closeModal();
+    };
+    const first = root.querySelector('input');
+    if (first) first.focus();
+}
+
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+function confirmDelete(name, onConfirm) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `<div class="td-modal-bg" onclick="if(event.target===this)closeModal()"><div class="td-modal">
+        <h3>Удалить?</h3><p>Удалить поставщика <strong>${esc(name)}</strong>?</p>
+        <div class="td-modal-footer">
+            <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+            <button class="btn btn-danger" id="modal-del-btn">Удалить</button>
+        </div></div></div>`;
+    document.getElementById('modal-del-btn').onclick = () => { onConfirm(); closeModal(); };
+}
+
+// ========================================
+// CRUD
+// ========================================
+const FIELDS = [
+    { id: 'name', label: 'Название', placeholder: 'Например: partdirects' },
+    { id: 'url', label: 'Сайт (URL)', placeholder: 'https://...' },
+    { id: 'category', label: 'Категория', placeholder: 'зч кофемашины' },
+    { id: 'discount', label: 'Скидка', placeholder: '10% / опт' },
+    { id: 'cooperation', label: 'Сотрудничество', placeholder: 'Партнер' },
+    { id: 'phone', label: 'Телефон', placeholder: '8 800 ...' },
+    { id: 'account', label: 'Аккаунт / Логин', placeholder: 'email или телефон' },
+    { id: 'password', label: 'Пароль', placeholder: '' },
+    { id: 'comment', label: 'Комментарий', placeholder: '' }
+];
+
+function addSupplier() {
+    showModal('Новый поставщик', FIELDS, v => {
+        if (!v.name) return;
+        v.id = nextId();
+        suppliers.push(v);
+        saveSuppliers(); renderAll();
+    });
+}
+
+function editSupplier(id) {
+    const s = suppliers.find(x => x.id === id);
+    if (!s) return;
+    const fields = FIELDS.map(f => ({ ...f, value: s[f.id] || '' }));
+    showModal('Редактировать поставщика', fields, v => {
+        Object.assign(s, v);
+        saveSuppliers(); renderAll();
+    });
+}
+
+function deleteSupplier(id) {
+    const s = suppliers.find(x => x.id === id);
+    if (!s) return;
+    confirmDelete(s.name, () => {
+        suppliers = suppliers.filter(x => x.id !== id);
+        saveSuppliers(); renderAll();
+    });
+}
+
+// ========================================
+// Render
+// ========================================
+function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function getCategories() {
+    const cats = new Set();
+    suppliers.forEach(s => { if (s.category) cats.add(s.category); });
+    return [...cats].sort();
+}
+
+function getFiltered() {
+    const q = (document.getElementById('sup-search').value || '').toLowerCase();
+    return suppliers.filter(s => {
+        if (activeCat !== 'all' && s.category !== activeCat) return false;
+        if (!q) return true;
+        return [s.name, s.category, s.url, s.phone, s.comment, s.cooperation, s.discount]
+            .some(v => v && v.toLowerCase().includes(q));
+    });
+}
+
+function renderCatFilters() {
+    const cats = getCategories();
+    const el = document.getElementById('cat-filters');
+    let html = `<button class="btn btn-sm ${activeCat === 'all' ? 'btn-primary' : 'btn-outline-secondary'}" onclick="setCat('all')">Все <span class="badge bg-white text-primary ms-1">${suppliers.length}</span></button>`;
+    cats.forEach(c => {
+        const cnt = suppliers.filter(s => s.category === c).length;
+        html += `<button class="btn btn-sm ${activeCat === c ? 'btn-primary' : 'btn-outline-secondary'}" onclick="setCat('${esc(c)}')">${esc(c)} <span class="badge bg-white text-primary ms-1">${cnt}</span></button>`;
+    });
+    el.innerHTML = html;
+}
+
+function setCat(c) { activeCat = c; renderAll(); }
+
+function renderSuppliers() {
+    const data = getFiltered();
+    const container = document.getElementById('sup-content');
+    document.getElementById('sup-count').textContent = data.length + ' из ' + suppliers.length + ' поставщиков';
+
+    if (data.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center py-5">Ничего не найдено</div>';
+        return;
+    }
+
+    let html = '<div class="sup-grid">';
+    data.forEach(s => {
+        const isUrl = s.url && (s.url.startsWith('http') || s.url.startsWith('www'));
+        html += `<div class="sup-card">`;
+        html += `<div class="sup-actions">
+            <button class="btn btn-sm btn-outline-primary" onclick="editSupplier(${s.id})" title="Редактировать"><i class="ti ti-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteSupplier(${s.id})" title="Удалить"><i class="ti ti-trash"></i></button>
+        </div>`;
+
+        // Name + URL
+        html += '<div class="sup-card-name">';
+        if (isUrl) {
+            html += `<a href="${esc(s.url)}" target="_blank"><i class="ti ti-external-link me-1"></i>${esc(s.name)}</a>`;
+        } else {
+            html += esc(s.name);
+        }
+        html += '</div>';
+
+        // Category
+        if (s.category) html += `<div class="sup-card-cat">${esc(s.category)}</div>`;
+
+        // Badges
+        html += '<div class="d-flex gap-2 flex-wrap mb-2">';
+        if (s.cooperation) html += `<span class="sup-badge sup-badge-partner"><i class="ti ti-handshake me-1"></i>${esc(s.cooperation)}</span>`;
+        if (s.discount && s.discount !== '—') html += `<span class="sup-badge sup-badge-discount"><i class="ti ti-discount-2 me-1"></i>${esc(s.discount)}</span>`;
+        html += '</div>';
+
+        // Phone
+        if (s.phone) {
+            html += `<div class="sup-card-row"><i class="ti ti-phone"></i><span class="label">Телефон</span><a href="tel:${esc(s.phone)}">${esc(s.phone)}</a></div>`;
+        }
+
+        // Account
+        if (s.account) {
+            html += `<div class="sup-card-row"><i class="ti ti-user"></i><span class="label">Аккаунт</span>${esc(s.account)}</div>`;
+        }
+
+        // Password
+        if (s.password) {
+            html += `<div class="sup-card-row"><i class="ti ti-lock"></i><span class="label">Пароль</span><span class="sup-pwd sup-pwd-hidden" onclick="togglePwd(this, '${esc(s.password)}')" title="Нажмите чтобы показать">••••••</span></div>`;
+        }
+
+        // Comment
+        if (s.comment) {
+            html += `<div class="sup-card-row"><i class="ti ti-note"></i><span class="label">Заметка</span>${esc(s.comment)}</div>`;
+        }
+
+        html += '</div>';
+    });
+
+    // Add card
+    html += `<div class="sup-add-card" onclick="addSupplier()"><i class="ti ti-plus"></i><div class="mt-2 text-muted">Добавить поставщика</div></div>`;
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function togglePwd(el, pwd) {
+    if (el.classList.contains('sup-pwd-hidden')) {
+        el.textContent = pwd;
+        el.classList.remove('sup-pwd-hidden');
+    } else {
+        el.textContent = '••••••';
+        el.classList.add('sup-pwd-hidden');
+    }
+}
+
+function renderAll() {
+    renderCatFilters();
+    renderSuppliers();
+}
+
+// ========================================
+// Init
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    Auth.require();
+    suppliers = loadSuppliers();
+    renderAll();
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Детализация техники — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+    .tech-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tech-breadcrumb a { color: var(--lr-accent, #00c853); text-decoration: none; cursor: pointer; font-weight: 500; }
+    .tech-breadcrumb a:hover { text-decoration: underline; }
+    .tech-breadcrumb .sep { color: var(--lr-text-muted, #868e96); }
+    .tech-breadcrumb .current { font-weight: 600; color: var(--lr-text, #001a34); }
+
+    .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .tile {
+        border: 1px solid var(--lr-border, #dee2e6); border-radius: 12px;
+        padding: 24px 20px; background: var(--lr-bg, #fff);
+        cursor: pointer; transition: all .15s; text-align: center; position: relative;
+    }
+    .tile:hover { border-color: var(--lr-accent, #00c853); box-shadow: 0 4px 12px rgba(0,200,83,.15); transform: translateY(-2px); }
+    .tile-icon { font-size: 36px; color: var(--lr-accent, #00c853); margin-bottom: 10px; }
+    .tile-name { font-size: 16px; font-weight: 600; color: var(--lr-text, #001a34); }
+    .tile-count { font-size: 12px; color: var(--lr-text-muted, #868e96); margin-top: 4px; }
+    .tile-empty { opacity: .5; }
+    .tile-add { border: 2px dashed var(--lr-border, #dee2e6); opacity: .6; }
+    .tile-add:hover { opacity: 1; border-color: var(--lr-accent, #00c853); }
+    .tile-add .tile-icon { color: var(--lr-text-muted, #868e96); }
+
+    /* Edit/delete buttons on tiles */
+    .tile-actions { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; }
+    .tile:hover .tile-actions { display: flex; }
+    .tile-actions .btn { padding: 2px 6px; font-size: 12px; line-height: 1; }
+
+    .part-card {
+        border: 1px solid var(--lr-border, #dee2e6); border-radius: 10px;
+        padding: 16px 20px; background: var(--lr-bg, #fff);
+        cursor: pointer; transition: all .15s; position: relative;
+    }
+    .part-card:hover { border-color: var(--lr-accent, #00c853); box-shadow: 0 2px 8px rgba(0,200,83,.1); }
+    .part-card:hover .tile-actions { display: flex; }
+    .part-card-name { font-size: 15px; font-weight: 600; color: var(--lr-text, #001a34); }
+    .part-card-icon { color: var(--lr-accent, #00c853); font-size: 20px; }
+    .part-card-hint { font-size: 12px; color: var(--lr-text-muted, #868e96); margin-top: 2px; }
+
+    .part-detail { background: var(--lr-bg, #fff); border: 1px solid var(--lr-border, #dee2e6); border-radius: 12px; padding: 24px; }
+    .part-detail-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+    .part-info-row { padding: 10px 0; border-bottom: 1px solid var(--lr-border, #dee2e6); }
+    .part-info-row:last-child { border-bottom: none; }
+    .part-info-value { font-size: 14px; color: var(--lr-text, #001a34); line-height: 1.5; }
+    .part-info-value .price { color: var(--lr-accent, #00c853); font-weight: 600; }
+
+    .supplier-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; background: var(--lr-bg-secondary, #f1f3f5); font-size: 12px; margin-top: 8px; }
+
+    /* Modal */
+    .td-modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1050; display: flex; align-items: center; justify-content: center; }
+    .td-modal { background: var(--lr-bg, #fff); border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .td-modal h3 { margin: 0 0 16px; font-size: 18px; }
+    .td-modal label { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: block; color: var(--lr-text-muted, #868e96); }
+    .td-modal .form-control, .td-modal textarea { margin-bottom: 12px; }
+    .td-modal textarea { min-height: 100px; resize: vertical; }
+    .td-modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+    <div id="navbar-slot"></div>
+    <div class="page-wrapper">
+        <div class="container-xl py-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="mb-0"><i class="ti ti-cpu me-2" style="color:#00c853;"></i>Детализация техники</h2>
+                </div>
+            </div>
+            <div class="tech-breadcrumb" id="breadcrumb"></div>
+            <div id="tech-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal container -->
+<div id="modal-root"></div>
+
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script>
+initNavbar('tech-details');
+
+// ========================================
+// Default data
+// ========================================
+const DEFAULT_DB = {
+    'Насосы': {
+        icon: 'ti-droplet',
+        brands: {
+            'Grundfos': {
+                models: {
+                    'Scala 1,2': {
+                        supplier: 'Поставщик Ринат',
+                        purchase: 'Покупка 5-12к в зависимости от поставщика (в наличии 3 шт по 8к)',
+                        parts: {
+                            'Торцевое уплотнение': 'Оригинальное торцевое 99016024 (7-9к)\nАналоговое торцевое — найти, пока покупаем по 4000р',
+                            'Электроника': '2 платы — модуль управления и плата управления (по одной штуке в наличии, очень редкая неисправность). Примерная цена 3000р каждая б/у',
+                            'Насосная часть': 'Стаканы — 3000р (поставщик Скала 2)',
+                            'Мотор': 'Перемотка невозможна',
+                            'Прокладки': 'Оригинальные 99016024 — идут в комплекте\nАналог — подобрать толщину и купить жгутом — 800р',
+                            'Подшипники ротора': '6001 — 1 шт (Япония) — 450р\n6201 — 1 шт (Китай) — 350р'
+                        }
+                    },
+                    'MQ 35,45': {
+                        supplier: 'Поставщик — AliExpress (Китай)',
+                        purchase: 'Покупка в зависимости от поставщика 8-10к',
+                        parts: {
+                            'Торцевое уплотнение': 'd-13mm — 350р',
+                            'Электроника': 'Не бывает проблем — по запросу',
+                            'Насосная часть': 'Рабочая группа (колёса+диффузор) — 5000р (обычно есть донорская, уточнять у менеджера по з/ч)\nПодходит от Джилекс',
+                            'Мотор': 'Перемотка возможна — 8к',
+                            'Прокладки': 'Не бывает проблем — по запросу\nАналог — подобрать толщину и купить жгутом — 800р',
+                            'Подшипники ротора': '6201 — 1 шт (Китай) — 350р\n6202 — 1 шт (Китай) — 350р'
+                        }
+                    },
+                    'SBA': {
+                        supplier: 'Поставщик — AliExpress (Китай)', purchase: '',
+                        parts: {
+                            'Торцевое уплотнение': 'Такой же как и у DAB — стоимость 4000р, не бывает проблем',
+                            'Поплавок': 'Идёт вместе',
+                            'Мотор': 'Перемотка 7к',
+                            'Подшипники ротора': '6201 — 2 шт (Китай) — 700р'
+                        }
+                    },
+                    'KP': {
+                        supplier: '', purchase: '',
+                        parts: {
+                            'Торцевое уплотнение': 'Подшипник скольжения 96551553 COVER FOR BEARING — 6000р (почти во всех)',
+                            'Поплавок': 'Поплавок 15А — покупали в Узбекистане по 1500р, в России в районе 5000р',
+                            'Электроника': 'Не сталкивались — по запросу',
+                            'Кабель питания': 'Не бывает проблем — по запросу',
+                            'Насосная часть': 'Не сталкивались, по запросу — дорого',
+                            'Мотор': 'Перемотка невозможна'
+                        }
+                    },
+                    'Sololift': {
+                        supplier: '', purchase: '',
+                        parts: { 'Мотор': 'Перемотка возможна, но в зависимости от модели 5000' }
+                    }
+                }
+            },
+            'DAB': {
+                models: {
+                    'DAB (все модели)': {
+                        supplier: 'Поставщик — AliExpress (Китай)',
+                        purchase: 'Покупка в зависимости от поставщика 15к (лучше перемотку)',
+                        parts: {
+                            'Торцевое уплотнение': 'Такой же как и у Grundfos SBA — стоимость 4000р, не бывает проблем',
+                            'Электроника': 'Не сталкивались',
+                            'Насосная часть': 'Корпус целиком иногда течёт, но редко, отдельно не продаётся, по запросу — дорого',
+                            'Мотор': 'Перемотка возможна — 8к',
+                            'Прокладки': 'Нет в модификации',
+                            'Подшипники ротора': '6201 — 2 шт (Китай) — 700р'
+                        }
+                    }
+                }
+            },
+            'Nocchi': { models: { 'Nocchi (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Willo': { models: { 'Willo (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Tsurumi': { models: { 'Tsurumi (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Intex': { models: { 'Intex (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Bestway': { models: { 'Bestway (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'ESPA': { models: { 'ESPA (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Marina': { models: { 'Marina (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Джилекс': { models: { 'Джилекс (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Pedrollo': { models: { 'Pedrollo (все модели)': { supplier: '', purchase: '', parts: { 'Поплавок': 'Поплавок 15 Ампер — 3000р' } } } },
+            'Gardena': { models: { 'Gardena (все модели)': { supplier: '', purchase: '', parts: {} } } },
+            'Гном': { models: { 'Гном (все модели)': { supplier: '', purchase: '', parts: {} } } }
+        }
+    },
+    'Парогенераторы': { icon: 'ti-cloud', brands: {} },
+    'Чайники': { icon: 'ti-kettle', brands: {} },
+    'Пылесосы': { icon: 'ti-vacuum-cleaner', brands: {} },
+    'Мультиварки': { icon: 'ti-soup', brands: {} },
+    'Кофемашины': { icon: 'ti-coffee', brands: {} },
+    'Микроволновки': { icon: 'ti-microwave', brands: {} }
+};
+
+// ========================================
+// Persistence — localStorage
+// ========================================
+const STORAGE_KEY = 'lr_tech_db';
+
+function loadDB() {
+    try {
+        const s = localStorage.getItem(STORAGE_KEY);
+        if (s) return JSON.parse(s);
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_DB));
+}
+
+function saveDB() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+let db = loadDB();
+
+// ========================================
+// Navigation
+// ========================================
+let navPath = [];
+
+function navigate(level, value) {
+    navPath = navPath.slice(0, level);
+    if (value !== undefined) navPath.push(value);
+    render();
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// ========================================
+// Modal helper
+// ========================================
+function showModal(title, fields, onSave) {
+    const root = document.getElementById('modal-root');
+    let html = `<div class="td-modal-bg" onclick="if(event.target===this)closeModal()"><div class="td-modal"><h3>${esc(title)}</h3>`;
+    fields.forEach(f => {
+        html += `<label>${esc(f.label)}</label>`;
+        if (f.type === 'textarea') {
+            html += `<textarea class="form-control" id="modal-${f.id}" placeholder="${esc(f.placeholder || '')}">${esc(f.value || '')}</textarea>`;
+        } else {
+            html += `<input type="text" class="form-control" id="modal-${f.id}" value="${esc(f.value || '')}" placeholder="${esc(f.placeholder || '')}">`;
+        }
+    });
+    html += `<div class="td-modal-footer">
+        <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+        <button class="btn btn-primary" id="modal-save-btn">Сохранить</button>
+    </div></div></div>`;
+    root.innerHTML = html;
+    document.getElementById('modal-save-btn').onclick = () => {
+        const values = {};
+        fields.forEach(f => { values[f.id] = document.getElementById('modal-' + f.id).value.trim(); });
+        onSave(values);
+        closeModal();
+    };
+    // Focus first field
+    const first = root.querySelector('input, textarea');
+    if (first) first.focus();
+}
+
+function closeModal() {
+    document.getElementById('modal-root').innerHTML = '';
+}
+
+function confirmDelete(name, onConfirm) {
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `<div class="td-modal-bg" onclick="if(event.target===this)closeModal()"><div class="td-modal">
+        <h3>Удалить?</h3>
+        <p>Вы уверены, что хотите удалить <strong>${esc(name)}</strong>?</p>
+        <div class="td-modal-footer">
+            <button class="btn btn-outline-secondary" onclick="closeModal()">Отмена</button>
+            <button class="btn btn-danger" id="modal-del-btn">Удалить</button>
+        </div>
+    </div></div>`;
+    document.getElementById('modal-del-btn').onclick = () => { onConfirm(); closeModal(); };
+}
+
+// ========================================
+// Icon picker (simple list)
+// ========================================
+const ICONS = ['ti-droplet','ti-cloud','ti-kettle','ti-vacuum-cleaner','ti-soup','ti-coffee','ti-microwave','ti-cpu','ti-device-unknown','ti-bolt','ti-flame','ti-snowflake','ti-wind','ti-wash-machine','ti-air-conditioning','ti-blender','ti-iron','ti-device-tv'];
+
+// ========================================
+// Breadcrumb
+// ========================================
+function renderBreadcrumb() {
+    const el = document.getElementById('breadcrumb');
+    let html = '';
+    if (navPath.length > 0) {
+        html += `<a onclick="navigate(0)"><i class="ti ti-home"></i></a><span class="sep">/</span>`;
+    }
+    navPath.forEach((p, i) => {
+        if (i < navPath.length - 1) {
+            html += `<a onclick="navigate(${i + 1})">${esc(p)}</a><span class="sep">/</span>`;
+        } else {
+            html += `<span class="current">${esc(p)}</span>`;
+        }
+    });
+    el.innerHTML = html;
+}
+
+// ========================================
+// Render
+// ========================================
+function render() {
+    renderBreadcrumb();
+    const c = document.getElementById('tech-content');
+    switch (navPath.length) {
+        case 0: renderTypes(c); break;
+        case 1: renderBrands(c); break;
+        case 2: renderModels(c); break;
+        case 3: renderParts(c); break;
+        case 4: renderPartDetail(c); break;
+    }
+}
+
+// ========================================
+// Level 0: Types
+// ========================================
+function renderTypes(c) {
+    let html = '<div class="tile-grid">';
+    for (const [type, data] of Object.entries(db)) {
+        const brandCount = Object.keys(data.brands || {}).length;
+        html += `
+            <div class="tile" onclick="navigate(0,'${esc(type)}')">
+                <div class="tile-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editType('${esc(type)}')" title="Редактировать"><i class="ti ti-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteType('${esc(type)}')" title="Удалить"><i class="ti ti-trash"></i></button>
+                </div>
+                <div class="tile-icon"><i class="ti ${data.icon || 'ti-device-unknown'}"></i></div>
+                <div class="tile-name">${esc(type)}</div>
+                <div class="tile-count">${brandCount ? brandCount + ' ' + pluralBrand(brandCount) : 'Пусто'}</div>
+            </div>`;
+    }
+    // Add button
+    html += `
+        <div class="tile tile-add" onclick="addType()">
+            <div class="tile-icon"><i class="ti ti-plus"></i></div>
+            <div class="tile-name">Добавить тип</div>
+        </div>`;
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+function addType() {
+    showModal('Новый тип техники', [
+        { id: 'name', label: 'Название', placeholder: 'Например: Роботы-пылесосы' }
+    ], v => {
+        if (!v.name) return;
+        if (db[v.name]) { alert('Такой тип уже существует'); return; }
+        db[v.name] = { icon: 'ti-device-unknown', brands: {} };
+        saveDB(); render();
+    });
+}
+
+function editType(oldName) {
+    const data = db[oldName];
+    showModal('Редактировать тип', [
+        { id: 'name', label: 'Название', value: oldName }
+    ], v => {
+        if (!v.name) return;
+        if (v.name !== oldName) {
+            if (db[v.name]) { alert('Такой тип уже существует'); return; }
+            db[v.name] = data;
+            delete db[oldName];
+        }
+        saveDB(); render();
+    });
+}
+
+function deleteType(name) {
+    confirmDelete(name, () => { delete db[name]; saveDB(); render(); });
+}
+
+function pluralBrand(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return 'марка';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'марки';
+    return 'марок';
+}
+
+// ========================================
+// Level 1: Brands
+// ========================================
+function renderBrands(c) {
+    const type = db[navPath[0]];
+    if (!type) { c.innerHTML = ''; return; }
+    let html = '<div class="tile-grid">';
+    for (const [brand, data] of Object.entries(type.brands)) {
+        const modelCount = Object.keys(data.models || {}).length;
+        const hasData = Object.values(data.models || {}).some(m => Object.keys(m.parts || {}).length > 0);
+        html += `
+            <div class="tile" onclick="navigate(1,'${esc(brand)}')">
+                <div class="tile-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editBrand('${esc(brand)}')" title="Редактировать"><i class="ti ti-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBrand('${esc(brand)}')" title="Удалить"><i class="ti ti-trash"></i></button>
+                </div>
+                <div class="tile-icon"><i class="ti ti-building-factory"></i></div>
+                <div class="tile-name">${esc(brand)}</div>
+                <div class="tile-count">${modelCount} ${pluralModel(modelCount)}${hasData ? '' : ' · нет данных'}</div>
+            </div>`;
+    }
+    html += `
+        <div class="tile tile-add" onclick="addBrand()">
+            <div class="tile-icon"><i class="ti ti-plus"></i></div>
+            <div class="tile-name">Добавить марку</div>
+        </div>`;
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+function addBrand() {
+    showModal('Новая марка', [
+        { id: 'name', label: 'Название марки', placeholder: 'Например: Karcher' }
+    ], v => {
+        if (!v.name) return;
+        const type = db[navPath[0]];
+        if (type.brands[v.name]) { alert('Такая марка уже есть'); return; }
+        type.brands[v.name] = { models: {} };
+        saveDB(); render();
+    });
+}
+
+function editBrand(oldName) {
+    showModal('Редактировать марку', [
+        { id: 'name', label: 'Название', value: oldName }
+    ], v => {
+        if (!v.name) return;
+        const brands = db[navPath[0]].brands;
+        if (v.name !== oldName) {
+            if (brands[v.name]) { alert('Такая марка уже есть'); return; }
+            brands[v.name] = brands[oldName];
+            delete brands[oldName];
+        }
+        saveDB(); render();
+    });
+}
+
+function deleteBrand(name) {
+    confirmDelete(name, () => { delete db[navPath[0]].brands[name]; saveDB(); render(); });
+}
+
+function pluralModel(n) {
+    if (n % 10 === 1 && n % 100 !== 11) return 'модель';
+    if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return 'модели';
+    return 'моделей';
+}
+
+// ========================================
+// Level 2: Models
+// ========================================
+function renderModels(c) {
+    const type = db[navPath[0]];
+    const brand = type && type.brands[navPath[1]];
+    if (!brand) { c.innerHTML = ''; return; }
+    let html = '<div class="tile-grid">';
+    for (const [model, data] of Object.entries(brand.models)) {
+        const partsCount = Object.keys(data.parts || {}).filter(k => data.parts[k]).length;
+        html += `
+            <div class="tile ${partsCount === 0 ? 'tile-empty' : ''}" onclick="navigate(2,'${esc(model)}')">
+                <div class="tile-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editModel('${esc(model)}')" title="Редактировать"><i class="ti ti-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteModel('${esc(model)}')" title="Удалить"><i class="ti ti-trash"></i></button>
+                </div>
+                <div class="tile-icon"><i class="ti ti-settings-2"></i></div>
+                <div class="tile-name">${esc(model)}</div>
+                <div class="tile-count">${partsCount ? partsCount + ' запчаст.' : 'Нет данных'}</div>
+            </div>`;
+    }
+    html += `
+        <div class="tile tile-add" onclick="addModel()">
+            <div class="tile-icon"><i class="ti ti-plus"></i></div>
+            <div class="tile-name">Добавить модель</div>
+        </div>`;
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+function addModel() {
+    showModal('Новая модель', [
+        { id: 'name', label: 'Название модели', placeholder: 'Например: JP 5-25' },
+        { id: 'supplier', label: 'Поставщик', placeholder: 'Необязательно' },
+        { id: 'purchase', label: 'Покупка / Цена', placeholder: 'Необязательно' }
+    ], v => {
+        if (!v.name) return;
+        const models = db[navPath[0]].brands[navPath[1]].models;
+        if (models[v.name]) { alert('Такая модель уже есть'); return; }
+        models[v.name] = { supplier: v.supplier, purchase: v.purchase, parts: {} };
+        saveDB(); render();
+    });
+}
+
+function editModel(oldName) {
+    const m = db[navPath[0]].brands[navPath[1]].models[oldName];
+    showModal('Редактировать модель', [
+        { id: 'name', label: 'Название', value: oldName },
+        { id: 'supplier', label: 'Поставщик', value: m.supplier || '' },
+        { id: 'purchase', label: 'Покупка / Цена', value: m.purchase || '' }
+    ], v => {
+        if (!v.name) return;
+        const models = db[navPath[0]].brands[navPath[1]].models;
+        m.supplier = v.supplier;
+        m.purchase = v.purchase;
+        if (v.name !== oldName) {
+            if (models[v.name]) { alert('Такая модель уже есть'); return; }
+            models[v.name] = m;
+            delete models[oldName];
+        }
+        saveDB(); render();
+    });
+}
+
+function deleteModel(name) {
+    confirmDelete(name, () => {
+        delete db[navPath[0]].brands[navPath[1]].models[name];
+        saveDB(); render();
+    });
+}
+
+// ========================================
+// Level 3: Parts list
+// ========================================
+const PART_ICONS = {
+    'Торцевое уплотнение': 'ti-circle-dot', 'Поплавок': 'ti-float-right',
+    'Электроника': 'ti-cpu', 'Кабель питания': 'ti-plug',
+    'Насосная часть': 'ti-droplet', 'Мотор': 'ti-engine',
+    'Прокладки': 'ti-circle', 'Подшипники ротора': 'ti-rotate-360'
+};
+
+function renderParts(c) {
+    const model = db[navPath[0]]?.brands[navPath[1]]?.models[navPath[2]];
+    if (!model) { c.innerHTML = ''; return; }
+    let html = '';
+
+    // Supplier info + edit model button
+    html += '<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">';
+    if (model.supplier) html += `<span class="supplier-badge"><i class="ti ti-truck me-1"></i>${esc(model.supplier)}</span>`;
+    if (model.purchase) html += `<span class="supplier-badge"><i class="ti ti-cash me-1"></i>${esc(model.purchase)}</span>`;
+    html += `<button class="btn btn-sm btn-outline-primary ms-auto" onclick="editModel('${esc(navPath[2])}')"><i class="ti ti-pencil me-1"></i>Ред. модель</button>`;
+    html += '</div>';
+
+    const partEntries = Object.entries(model.parts || {}).filter(([k, v]) => v);
+
+    html += '<div class="tile-grid">';
+    partEntries.forEach(([partName, partValue]) => {
+        const icon = PART_ICONS[partName] || 'ti-tool';
+        const preview = partValue.split('\n')[0];
+        const truncated = preview.length > 60 ? preview.substring(0, 60) + '...' : preview;
+        html += `
+            <div class="part-card" onclick="navigate(3,'${esc(partName)}')">
+                <div class="tile-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editPart('${esc(partName)}')" title="Редактировать"><i class="ti ti-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deletePart('${esc(partName)}')" title="Удалить"><i class="ti ti-trash"></i></button>
+                </div>
+                <div class="d-flex align-items-start gap-2">
+                    <div class="part-card-icon"><i class="ti ${icon}"></i></div>
+                    <div>
+                        <div class="part-card-name">${esc(partName)}</div>
+                        <div class="part-card-hint">${esc(truncated)}</div>
+                    </div>
+                </div>
+            </div>`;
+    });
+
+    // Add part tile
+    html += `
+        <div class="tile tile-add" onclick="addPart()">
+            <div class="tile-icon"><i class="ti ti-plus"></i></div>
+            <div class="tile-name">Добавить запчасть</div>
+        </div>`;
+    html += '</div>';
+    c.innerHTML = html;
+}
+
+function addPart() {
+    showModal('Новая запчасть', [
+        { id: 'name', label: 'Название', placeholder: 'Например: Торцевое уплотнение' },
+        { id: 'desc', label: 'Описание / Информация', placeholder: 'Цены, артикулы, заметки...', type: 'textarea' }
+    ], v => {
+        if (!v.name) return;
+        const parts = db[navPath[0]].brands[navPath[1]].models[navPath[2]].parts;
+        if (parts[v.name]) { alert('Такая запчасть уже есть'); return; }
+        parts[v.name] = v.desc || '';
+        saveDB(); render();
+    });
+}
+
+function editPart(oldName) {
+    const parts = db[navPath[0]].brands[navPath[1]].models[navPath[2]].parts;
+    showModal('Редактировать запчасть', [
+        { id: 'name', label: 'Название', value: oldName },
+        { id: 'desc', label: 'Описание / Информация', value: parts[oldName] || '', type: 'textarea' }
+    ], v => {
+        if (!v.name) return;
+        if (v.name !== oldName) {
+            if (parts[v.name]) { alert('Такая запчасть уже есть'); return; }
+            delete parts[oldName];
+        }
+        parts[v.name] = v.desc || '';
+        saveDB();
+        // Update navPath if we're viewing this part
+        if (navPath.length === 4 && navPath[3] === oldName) navPath[3] = v.name;
+        render();
+    });
+}
+
+function deletePart(name) {
+    confirmDelete(name, () => {
+        delete db[navPath[0]].brands[navPath[1]].models[navPath[2]].parts[name];
+        saveDB(); render();
+    });
+}
+
+// ========================================
+// Level 4: Part detail
+// ========================================
+function renderPartDetail(c) {
+    const model = db[navPath[0]]?.brands[navPath[1]]?.models[navPath[2]];
+    const partName = navPath[3];
+    const partValue = model?.parts?.[partName];
+
+    if (!partValue) { c.innerHTML = '<div class="text-muted py-5 text-center">Нет данных</div>'; return; }
+
+    let html = '<div class="part-detail">';
+    html += `<div class="d-flex justify-content-between align-items-start">`;
+    html += `<div class="part-detail-title"><i class="ti ti-tool me-2" style="color:var(--lr-accent,#00c853);"></i>${esc(partName)}</div>`;
+    html += `<button class="btn btn-sm btn-outline-primary" onclick="editPart('${esc(partName)}')"><i class="ti ti-pencil me-1"></i>Редактировать</button>`;
+    html += `</div>`;
+
+    html += `<div class="mb-3 text-muted" style="font-size:13px;">${esc(navPath[1])} ${esc(navPath[2])}</div>`;
+
+    const lines = partValue.split('\n').filter(l => l.trim());
+    lines.forEach(line => {
+        html += '<div class="part-info-row">';
+        const highlighted = esc(line).replace(/(\d+[\s]?(?:к|р|руб)[\w]*)/gi, '<span class="price">$1</span>');
+        html += `<div class="part-info-value">${highlighted}</div>`;
+        html += '</div>';
+    });
+
+    if (model.supplier || model.purchase) {
+        html += '<div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--lr-border,#dee2e6);">';
+        if (model.supplier) html += `<div class="supplier-badge"><i class="ti ti-truck me-1"></i>${esc(model.supplier)}</div> `;
+        if (model.purchase) html += `<div class="supplier-badge mt-1"><i class="ti ti-cash me-1"></i>${esc(model.purchase)}</div>`;
+        html += '</div>';
+    }
+
+    html += '</div>';
+    html += `<div class="mt-3"><button class="btn btn-outline-secondary btn-sm" onclick="navigate(3)"><i class="ti ti-arrow-left me-1"></i>Назад к запчастям</button></div>`;
+    c.innerHTML = html;
+}
+
+// ========================================
+// Init
+// ========================================
+document.addEventListener('DOMContentLoaded', () => {
+    Auth.require();
+    render();
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
+</body>
+</html>
