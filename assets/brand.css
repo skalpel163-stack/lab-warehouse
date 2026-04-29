@@ -745,22 +745,22 @@ a:hover { color: var(--lr-info); text-decoration: underline; }
     align-items: center;
     gap: 0;
     background: var(--lr-surface);
-    border-radius: 12px;
-    padding: 14px 24px;
+    border-radius: 8px;
+    padding: 10px 16px;
     border: 1px solid transparent;
 }
 
 .stats-strip-item {
     display: flex;
     align-items: baseline;
-    gap: 5px;
-    padding: 0 16px;
+    gap: 4px;
+    padding: 0 12px;
 }
 
 .stats-strip-item:first-child { padding-left: 0; }
 
 .stats-strip-value {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--lr-text);
     letter-spacing: -0.02em;
@@ -768,7 +768,7 @@ a:hover { color: var(--lr-info); text-decoration: underline; }
 }
 
 .stats-strip-label {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--lr-text-muted);
     font-weight: 400;
 }
@@ -839,13 +839,13 @@ a:hover { color: var(--lr-info); text-decoration: underline; }
 
 /* ===== SEARCH ===== */
 .search-input-lr {
-    height: 42px;
+    height: 36px;
     border: 1px solid var(--lr-border);
     background: var(--lr-surface);
     color: var(--lr-text);
-    border-radius: 10px;
-    padding: 0 16px;
-    font-size: 14px;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 13px;
     width: 100%;
     font-family: inherit;
     transition: all 0.12s ease;
@@ -864,7 +864,7 @@ a:hover { color: var(--lr-info); text-decoration: underline; }
 .search-bar {
     background: var(--lr-surface);
     border-bottom: 1px solid var(--lr-border);
-    padding: 14px 0;
+    padding: 10px 0;
 }
 
 /* ===== TOOLBAR ===== */
