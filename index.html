@@ -394,7 +394,7 @@ let currentPage = 1;
 const PER_PAGE = 10;
 let currentCategory = '';
 let activeQuickFilter = 'all';
-let viewMode = localStorage.getItem('lr_viewMode') || 'list';
+let viewMode = localStorage.getItem('lr_viewMode') || 'grid';
 
 function setQuickFilter(filter, btn) {
     activeQuickFilter = filter;
@@ -774,7 +774,7 @@ function renderGrid() {
             if (item._brands && item._brands[0]) tags.push(`<span class="tag-pill brand">${item._brands[0]}</span>`);
 
             return `
-                <div class="col-6 col-md-4 col-lg-3">
+                <div class="col-6 col-md-4 col-lg-4">
                     <a href="/product.html?code=${encodeURIComponent(item.item_code)}" class="card product-card" style="position:relative;text-decoration:none;color:inherit;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
                         <div style="position:relative;">
                             ${img}
