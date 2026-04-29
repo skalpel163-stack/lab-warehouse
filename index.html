@@ -71,7 +71,7 @@
         <!-- Catalog layout -->
         <div class="row">
             <!-- Sidebar filters -->
-            <aside class="col-lg-3 filter-sidebar">
+            <aside class="col-lg-2 filter-sidebar">
                 <div class="filter-card" data-filter-card>
                     <h5 class="filter-toggle" onclick="toggleFilter(this)">Марка <i class="ti ti-chevron-up"></i></h5>
                     <div class="filter-body" id="filter-brand"></div>
@@ -800,7 +800,7 @@ function renderGrid() {
             if (item._brands && item._brands[0]) tags.push(`<span class="tag-pill brand">${item._brands[0]}</span>`);
 
             return `
-                <div class="col-6 col-md-6 col-lg-3">
+                <div class="col-6 col-md-4 col-lg-15">
                     <a href="/product.html?code=${encodeURIComponent(item.item_code)}" class="card product-card" style="position:relative;text-decoration:none;color:inherit;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
                         <div style="position:relative;">
                             ${img}
