@@ -636,7 +636,16 @@ function renderFilterLists() {
     };
 
     renderFilterBlock('filter-parttype', countTags('_partTypes'), true);
-    renderFilterBlock('filter-brand', countTags('_brands'), true);
+    // For brands: show ALL brands from dictionary, with counts for those in warehouse
+    const allBrands = getBrands();
+    const brandCounts = {};
+    allItems.forEach(item => {
+        (item._brands || []).forEach(b => { brandCounts[b] = (brandCounts[b] || 0) + 1; });
+    });
+    const allBrandsList = Object.entries(allBrands)
+        .map(([brand]) => [brand, brandCounts[brand] || 0])
+        .sort((a, b) => b[1] - a[1]);
+    renderFilterBlock('filter-brand', allBrandsList, true);
     // Wire brand checkboxes to update model filter on change
     document.querySelectorAll('#filter-brand input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', updateModelFilter);
