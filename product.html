@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Товар — Лаборатория Ремонта</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.12.0/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/brand.css">
+<style>
+.product-gallery-main { aspect-ratio: 1; background: #f8f9fa; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; overflow: hidden; }
+.product-gallery-main img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.product-title { font-size: 24px; font-weight: 700; margin: 0; }
+.product-code { font-size: 12px; color: #6b7280; }
+.product-price-big { font-size: 32px; font-weight: 700; color: var(--lr-primary); margin: 0; }
+.product-availability { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fdf4; border-radius: 6px; font-size: 14px; }
+.product-availability.warning { background: #fefce8; }
+.product-availability.danger { background: #fef2f2; }
+.avail-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+.avail-dot.yellow { background: #eab308; }
+.avail-dot.red { background: #ef4444; }
+.product-tags { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.tag { display: inline-block; padding: 4px 8px; background: #e0e7ff; color: #4f46e5; border-radius: 4px; font-size: 12px; font-weight: 500; }
+.tag.brand { background: #fce7f3; color: #be185d; }
+.tag.appliance { background: #dbeafe; color: #0c4a6e; }
+.tag.free { background: #dbeafe; color: #1e40af; }
+.product-specs { background: #f8f9fa; border-radius: 8px; padding: 16px; }
+.spec-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+.spec-row:last-child { border-bottom: none; }
+.spec-label { color: #6b7280; }
+.spec-value { font-weight: 500; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--lr-primary); text-decoration: none; margin-bottom: 20px; font-size: 14px; }
+.back-link:hover { text-decoration: underline; }
+.loading { display: flex; align-items: center; justify-content: center; min-height: 400px; }
+.spinner { width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: var(--lr-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="page">
+<div id="navbar-slot"></div>
+<div class="page-wrapper">
+<div class="container-xl py-3">
+<a href="/" class="back-link"><i class="ti ti-chevron-left"></i> Вернуться в каталог</a>
+<div id="product-content">
+<div class="loading"><div class="spinner"></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<script src="assets/auth.js"></script>
+<script src="assets/nav.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/api.js"></script>
+<script>
+async function loadProduct() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const itemCode = params.get('code');
+        if (!itemCode) {
+            document.getElementById('product-content').innerHTML = `<div class="alert alert-danger">Товар не найден</div>`;
+            return;
+        }
+        const allItems = await fetchWarehouseData();
+        const item = allItems.find(i => i.item_code === itemCode);
+        if (!item) {
+            document.getElementById('product-content').innerHTML = `<div class="alert alert-danger">Товар не найден</div>`;
+            return;
+        }
+        document.title = `${item.item_name} — Лаборатория Ремонта`;
+        renderProduct(item);
+    } catch (e) {
+        console.error(e);
+        document.getElementById('product-content').innerHTML = `<div class="alert alert-danger">Ошибка загрузки товара</div>`;
+    }
+}
+
+function renderProduct(item) {
+    const hasImg = !!item.image;
+    const imgHtml = hasImg ? `<img src="${API.imgUrl(item.image)}" alt="">` : `<div style="font-size:60px;color:#d1d5db;"><i class="ti ti-photo"></i></div>`;
+    const statusClass = item.warehouse.includes('Основной') ? 'green' : item.warehouse.includes('Подотчёт') ? 'yellow' : 'red';
+    const statusText = item.warehouse.includes('Основной') ? 'На складе' : item.warehouse.includes('Подотчёт') ? 'На подотчёте' : 'Списано';
+    const availClass = item.actual_qty > 0 ? '' : item.warehouse.includes('Подотчёт') ? 'warning' : 'danger';
+    const partTypesHtml = (item._partTypes || []).map(t => `<span class="tag">${t}</span>`).join('');
+    const brandsHtml = (item._brands || []).map(t => `<span class="tag brand">${t}</span>`).join('');
+    const appliancesHtml = (item._appliances || []).map(t => `<span class="tag appliance">${t}</span>`).join('');
+    const freeHtml = item.sourceType === 'Бесплатная' ? `<span class="tag free">Бесплатная</span>` : '';
+
+    const specs = [];
+    if (item.article) specs.push(['Артикул', item.article]);
+    if (item.compatibility) specs.push(['Совместимость', item.compatibility]);
+    specs.push(['Локация', item.locация || '—']);
+    specs.push(['Место', item.location || '—']);
+    specs.push(['Ответственный', item.responsible || '—']);
+    if (item.supplier) specs.push(['Поставщик', item.supplier]);
+    if (item.purchasePrice) specs.push(['Цена закупки', formatPrice(item.purchasePrice)]);
+    specs.push(['Группа товара', item.item_group || '—']);
+    specs.push(['Минимум на складе', item.minStock || '—']);
+    if (item.analogs) specs.push(['Аналоги', item.analogs]);
+
+    document.getElementById('product-content').innerHTML = `
+        <div class="row">
+            <div class="col-md-5">
+                <div class="product-gallery-main">${imgHtml}</div>
+            </div>
+            <div class="col-md-7">
+                <div class="product-code">${item.item_code}</div>
+                <h1 class="product-title">${item.item_name}</h1>
+                <div class="product-tags">${partTypesHtml}${brandsHtml}${appliancesHtml}${freeHtml}</div>
+                <h2 class="product-price-big">${formatPrice(item.valuation_rate)}</h2>
+                <div class="product-availability ${availClass}">
+                    <span class="avail-dot ${statusClass}"></span>
+                    <span>${statusText} · <strong>${item.actual_qty} шт.</strong></span>
+                </div>
+                ${item.notes ? `<div style="padding:12px;background:#f0fdf4;border-radius:6px;font-size:14px;margin:12px 0;"><strong>Описание:</strong> ${item.notes}</div>` : ''}
+                <div style="display:flex;gap:8px;margin:20px 0;">
+                    <button class="btn btn-primary btn-lg" style="flex:1;"><i class="ti ti-shopping-cart"></i> Добавить в корзину</button>
+                    <button class="btn btn-outline-secondary btn-lg"><i class="ti ti-heart"></i></button>
+                </div>
+                <div class="product-specs">
+                    ${specs.map(([label, value]) => `
+                        <div class="spec-row">
+                            <span class="spec-label">${label}</span>
+                            <span class="spec-value">${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function formatPrice(price) {
+    if (!price) return '—';
+    return price.toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 });
+}
+
+window.addEventListener('load', loadProduct);
+</script>
+</body>
+</html>

@@ -743,9 +743,9 @@ function renderGrid() {
                 const img = item.image
                     ? `<img src="${API.imgUrl(item.image)}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" loading="lazy">`
                     : `<div style="width:32px;height:32px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;"><i class="ti ti-photo" style="font-size:14px;color:#94a3b8;"></i></div>`;
-                return `<tr style="cursor:pointer;" onclick="openProduct('${item.item_code}')">
-                    <td>${img}</td>
-                    <td><div style="font-weight:500;">${escHtml(item.item_name)}</div>${item.notes ? `<div style="font-size:11px;color:var(--lr-text-muted);"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0,60)}${item.notes.length>60?'...':''}</div>`:''}</td>
+                return `<tr style="cursor:pointer;">
+                    <td onclick="window.location='/product.html?code=${encodeURIComponent(item.item_code)}'">${img}</td>
+                    <td onclick="window.location='/product.html?code=${encodeURIComponent(item.item_code)}'"><div style="font-weight:500;">${escHtml(item.item_name)}</div>${item.notes ? `<div style="font-size:11px;color:var(--lr-text-muted);"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0,60)}${item.notes.length>60?'...':''}</div>`:''}</td>
                     <td>${item.actual_qty} шт.</td>
                     <td>${formatPrice(item.valuation_rate)}</td>
                     <td>${getStatusText(item.warehouse)}</td>
@@ -775,7 +775,7 @@ function renderGrid() {
 
             return `
                 <div class="col-6 col-md-4 col-lg-3">
-                    <div class="card product-card" onclick="openProduct('${item.item_code}')" style="position:relative;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
+                    <a href="/product.html?code=${encodeURIComponent(item.item_code)}" class="card product-card" style="position:relative;text-decoration:none;color:inherit;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
                         <div style="position:relative;">
                             ${img}
                             ${badge}
@@ -793,7 +793,7 @@ function renderGrid() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             `;
         }).join('');
     }
