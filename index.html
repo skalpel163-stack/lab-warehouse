@@ -93,8 +93,8 @@
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Цена, ₽ <i class="ti ti-chevron-down"></i></h5>
-                    <div class="filter-body" style="display:none;">
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Цена, ₽ <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body">
                         <div class="price-slider-container">
                             <div class="price-slider-track">
                                 <div class="price-slider-fill" id="price-fill"></div>
@@ -111,8 +111,8 @@
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Ответственный <i class="ti ti-chevron-down"></i></h5>
-                    <div class="filter-body" id="filter-responsible" style="display:none;"></div>
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Ответственный <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-responsible"></div>
                 </div>
 
                 <div class="filter-card" data-filter-card>
@@ -121,8 +121,8 @@
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Статус <i class="ti ti-chevron-down"></i></h5>
-                    <div class="filter-body" id="filter-status" style="display:none;">
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Статус <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-status">
                         <label class="filter-check"><input type="checkbox" value="Основной" onchange="applyFilters()"> На складе <span class="count" id="fc-stock">0</span></label>
                         <label class="filter-check"><input type="checkbox" value="Подотчёт" onchange="applyFilters()"> Подотчёт <span class="count" id="fc-account">0</span></label>
                         <label class="filter-check"><input type="checkbox" value="Списан" onchange="applyFilters()"> Списано <span class="count" id="fc-written">0</span></label>
@@ -130,8 +130,8 @@
                 </div>
 
                 <div class="filter-card" data-filter-card>
-                    <h5 class="filter-toggle collapsed" onclick="toggleFilter(this)">Источник <i class="ti ti-chevron-down"></i></h5>
-                    <div class="filter-body" id="filter-source" style="display:none;">
+                    <h5 class="filter-toggle" onclick="toggleFilter(this)">Источник <i class="ti ti-chevron-up"></i></h5>
+                    <div class="filter-body" id="filter-source">
                         <label class="filter-check"><input type="checkbox" value="Купленная" onchange="applyFilters()"> Купленная <span class="count" id="fc-paid">0</span></label>
                         <label class="filter-check"><input type="checkbox" value="Бесплатная" onchange="applyFilters()"> Бесплатная <span class="count" id="fc-free">0</span></label>
                     </div>
@@ -635,7 +635,7 @@ function renderFilterLists() {
         return Object.entries(counts).sort((a, b) => b[1] - a[1]);
     };
 
-    renderFilterBlock('filter-parttype', countTags('_partTypes'), false);
+    renderFilterBlock('filter-parttype', countTags('_partTypes'), true);
     renderFilterBlock('filter-brand', countTags('_brands'), true);
     // Wire brand checkboxes to update model filter on change
     document.querySelectorAll('#filter-brand input[type="checkbox"]').forEach(cb => {
@@ -653,7 +653,7 @@ function renderFilterLists() {
     getAllMasters().forEach(m => { if (m.responsible) respSet.add(m.responsible); });
     allItems.forEach(i => { if (i.responsible) respSet.add(i.responsible); });
     const respItems = [...respSet].map(r => [r, allItems.filter(i => i.responsible === r).length]);
-    renderFilterBlock('filter-responsible', respItems, false);
+    renderFilterBlock('filter-responsible', respItems, true);
 
     // Status counts
     document.getElementById('fc-stock').textContent = allItems.filter(i => i.warehouse.includes('Основной')).length;
