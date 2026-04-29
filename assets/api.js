@@ -113,7 +113,7 @@ async function fetchWarehouseData() {
             notes: item.custom_notes,
             location: item.custom_location,
             locация: item['custom_locация'],
-            responsible: item.custom_responsible,
+            responsible: item.custom_responsible || (bin.warehouse.includes('Подотчёт') ? '' : 'labremonta'),
             item_group: item.item_group,
             _partTypes: meta.partTypes && meta.partTypes.length ? meta.partTypes : detectPartType(searchText),
             _brands: meta.brands && meta.brands.length ? meta.brands : detectBrands(searchText),
