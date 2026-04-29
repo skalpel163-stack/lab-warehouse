@@ -1345,6 +1345,11 @@ a:hover { color: var(--lr-info); text-decoration: underline; }
 }
 .theme-toggle:hover { color: var(--lr-text); background: var(--lr-bg-elevated); }
 
+/* Remove right padding from row */
+.row.row-cards {
+    margin-right: 0 !important;
+}
+
 /* Grid: 5 columns on large screens */
 @media (min-width: 1400px) {
     .col-lg-15 { flex: 0 0 calc(100% / 5); max-width: calc(100% / 5); }
