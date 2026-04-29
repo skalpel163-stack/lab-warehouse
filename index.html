@@ -610,9 +610,19 @@ function toggleShowMore(btn, listId) {
 function filterSearchInside(input, containerId) {
     const q = input.value.toLowerCase();
     const list = document.getElementById(containerId + '-list');
+
+    // Expand list if searching
+    if (q) {
+        list.classList.remove('collapsed');
+        list.classList.add('expanded');
+    }
+
+    let hasVisibleItems = false;
     list.querySelectorAll('.filter-check').forEach(label => {
         const text = label.textContent.toLowerCase();
-        label.style.display = !q || text.includes(q) ? '' : 'none';
+        const shouldShow = !q || text.includes(q);
+        label.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) hasVisibleItems = true;
     });
 }
 
