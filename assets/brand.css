@@ -1348,7 +1348,9 @@ a:hover { color: var(--lr-info); text-decoration: underline; }
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
     .lr-logo-badge { display: none; }
-    .filter-sidebar { display: none; }
+    #filters-toggle-btn { display: block !important; }
+    .filter-sidebar { position: fixed; left: 0; top: 0; width: 100%; max-width: 280px; height: 100vh; background: var(--lr-surface); z-index: 999; transform: translateX(-100%); transition: transform 0.3s ease; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,0.1); padding: 12px; }
+    .filter-sidebar.mobile-open { transform: translateX(0); }
     .stat-card { padding: 14px; }
     .stat-card .stat-value { font-size: 20px; }
     .product-detail-price { font-size: 26px; }

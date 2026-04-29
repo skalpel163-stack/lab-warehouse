@@ -165,6 +165,7 @@
                             <button class="btn btn-sm btn-icon" id="view-grid-btn" onclick="setViewMode('grid')" title="Карточки"><i class="ti ti-layout-grid"></i></button>
                             <button class="btn btn-sm btn-icon" id="view-list-btn" onclick="setViewMode('list')" title="Список"><i class="ti ti-list"></i></button>
                         </div>
+                        <button class="btn btn-sm btn-icon btn-outline-secondary" id="filters-toggle-btn" onclick="toggleMobileFilters()" title="Фильтры" style="display:none;"><i class="ti ti-filter"></i></button>
                     </div>
                 </div>
 
@@ -457,6 +458,21 @@ function toggleFilter(h5) {
         body.style.display = 'none';
         icon.className = 'ti ti-chevron-down';
         h5.classList.add('collapsed');
+    }
+}
+
+// ===== Mobile filters toggle =====
+function toggleMobileFilters() {
+    const sidebar = document.querySelector('.filter-sidebar');
+    const btn = document.getElementById('filters-toggle-btn');
+    if (sidebar.classList.contains('mobile-open')) {
+        sidebar.classList.remove('mobile-open');
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-secondary');
+    } else {
+        sidebar.classList.add('mobile-open');
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-primary');
     }
 }
 
@@ -774,7 +790,7 @@ function renderGrid() {
             if (item._brands && item._brands[0]) tags.push(`<span class="tag-pill brand">${item._brands[0]}</span>`);
 
             return `
-                <div class="col-6 col-md-4 col-lg-4">
+                <div class="col-6 col-md-6 col-lg-3">
                     <a href="/product.html?code=${encodeURIComponent(item.item_code)}" class="card product-card" style="position:relative;text-decoration:none;color:inherit;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
                         <div style="position:relative;">
                             ${img}
