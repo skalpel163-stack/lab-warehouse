@@ -611,7 +611,7 @@ function filterSearchInside(input, containerId) {
     const q = input.value.toLowerCase();
     const list = document.getElementById(containerId + '-list');
     list.querySelectorAll('.filter-check').forEach(label => {
-        const text = label.getAttribute('data-label') || '';
+        const text = label.textContent.toLowerCase();
         label.style.display = !q || text.includes(q) ? '' : 'none';
     });
 }
