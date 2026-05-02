@@ -241,10 +241,6 @@
                                     <input type="number" class="form-control" id="add-min-stock" placeholder="2" min="0">
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Совместимость с моделями</label>
-                                <textarea class="form-control" id="add-compatibility" rows="2" placeholder="iPhone 12, iPhone 12 Pro, iPhone 12 mini"></textarea>
-                            </div>
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Локация</label>
@@ -1125,7 +1121,6 @@ async function submitAddItem(e) {
         supplier: document.getElementById('add-supplier').value.trim(),
         purchPrice: parseFloat(document.getElementById('add-purchase-price').value) || 0,
         minStock: parseInt(document.getElementById('add-min-stock').value) || 0,
-        compat: document.getElementById('add-compatibility').value.trim(),
         photo: document.getElementById('add-photo').files[0],
         sourceType: document.getElementById('add-source').value
     };
@@ -1134,7 +1129,7 @@ async function submitAddItem(e) {
         const code = await createItemWithStock(data.name, data.group, data.qty, data.price, data.loc, data.place, data.responsible, data.notes, data.photo, data.sourceType);
         // Save metadata
         Meta.set(code, {
-            article: data.article, compatibility: data.compat, supplier: data.supplier,
+            article: data.article, supplier: data.supplier,
             purchasePrice: data.purchPrice, minStock: data.minStock
         });
         toast('Товар добавлен!', 'success');
