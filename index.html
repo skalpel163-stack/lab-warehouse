@@ -1300,46 +1300,84 @@ function showItemModal(itemCode) {
     if (!item) return;
 
     const hasImg = !!item.image;
-    const imgHtml = hasImg ? `<img src="${API.imgUrl(item.image)}" alt="" style="max-width:100%;max-height:300px;object-fit:contain;">` : `<div style="width:100%;height:200px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;"><i class="ti ti-photo" style="font-size:80px;color:#cbd5e1;"></i></div>`;
-    const tags = [];
-    if (item._partTypes && item._partTypes[0]) tags.push(`<span class="tag">${item._partTypes[0]}</span>`);
-    if (item._brands && item._brands[0]) tags.push(`<span class="tag brand">${item._brands[0]}</span>`);
-    if (item._appliances && item._appliances[0]) tags.push(`<span class="tag appliance">${item._appliances[0]}</span>`);
-
-    const specs = [];
-    if (item.article) specs.push(['Артикул', item.article]);
-    specs.push(['Локация', item.locация || '—']);
-    specs.push(['Место', item.location || '—']);
-    specs.push(['Ответственный', item.responsible || '—']);
-    specs.push(['Группа товара', item.item_group || '—']);
+    const imgHtml = hasImg ? `<img src="${API.imgUrl(item.image)}" id="item-modal-img" alt="" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:8px;">` : `<div style="width:100%;height:200px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;border-radius:8px;"><i class="ti ti-photo" style="font-size:80px;color:#cbd5e1;"></i></div>`;
+    const meta = Meta.get(itemCode);
+    const settings = getSettings();
 
     const html = `
         <div class="modal fade" id="item-modal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">${escHtml(item.item_name)}</h5>
+                        <div>
+                            <h5 class="modal-title">${escHtml(item.item_name)}</h5>
+                            <div style="font-size:12px;color:#6b7280;">${item.item_code}</div>
+                        </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-5">
-                                ${imgHtml}
+                                <div id="item-modal-img-container">${imgHtml}</div>
+                                <div style="margin-top:12px;display:flex;gap:8px;">
+                                    <button class="btn btn-sm btn-primary" onclick="document.getElementById('item-modal-photo-input').click();">
+                                        <i class="ti ti-upload"></i> Загрузить фото
+                                    </button>
+                                    ${hasImg ? `<button class="btn btn-sm btn-outline-danger" onclick="removeItemPhoto('${itemCode}');">
+                                        <i class="ti ti-trash"></i> Удалить
+                                    </button>` : ''}
+                                </div>
+                                <input type="file" id="item-modal-photo-input" accept="image/*" style="display:none;" onchange="uploadItemPhoto('${itemCode}')">
                             </div>
                             <div class="col-md-7">
-                                <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">${item.item_code}</div>
-                                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;">${tags.join('')}</div>
                                 <div style="font-size:24px;font-weight:700;color:var(--lr-primary);margin-bottom:12px;">${formatPrice(item.valuation_rate)}</div>
-                                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border-radius:6px;margin-bottom:12px;font-size:14px;">
-                                    <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>
-                                    <span>${item.actual_qty} шт. в наличии</span>
+
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Артикул</label>
+                                    <input type="text" class="form-control form-control-sm" id="item-modal-article" value="${escHtml(meta.article || '')}" placeholder="—">
                                 </div>
-                                ${item.notes ? `<div style="padding:8px;background:#f0fdf4;border-radius:6px;font-size:13px;margin-bottom:12px;"><strong>Описание:</strong> ${escHtml(item.notes)}</div>` : ''}
-                                <div style="background:#f8f9fa;border-radius:8px;padding:12px;">
-                                    ${specs.map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;"><span style="color:#6b7280;">${k}</span><strong>${v}</strong></div>`).join('')}
+
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Локация</label>
+                                    <input type="text" class="form-control form-control-sm" id="item-modal-locacia" value="${escHtml(item.locация || '')}" placeholder="—">
+                                </div>
+
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Место хранения</label>
+                                    <select class="form-select form-select-sm" id="item-modal-location">
+                                        <option value="">—</option>
+                                        ${settings.locations.map(l => `<option value="${l}" ${item.location === l ? 'selected' : ''}>${l}</option>`).join('')}
+                                    </select>
+                                </div>
+
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Ответственный</label>
+                                    <select class="form-select form-select-sm" id="item-modal-responsible">
+                                        <option value="">—</option>
+                                        ${settings.responsible.map(r => `<option value="${r}" ${item.responsible === r ? 'selected' : ''}>${r}</option>`).join('')}
+                                    </select>
+                                </div>
+
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;">Группа товара</label>
+                                    <select class="form-select form-select-sm" id="item-modal-group">
+                                        <option value="">—</option>
+                                        ${settings.groups.map(g => `<option value="${g}" ${item.item_group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                    </select>
+                                </div>
+
+                                <div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px;color:#6b7280;">
+                                    <div>📦 ${item.actual_qty} шт. в наличии</div>
+                                    <div>📅 Создано: ${new Date().toLocaleDateString('ru-RU')}</div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                        <button type="button" class="btn btn-primary" onclick="saveItemModal('${itemCode}');">
+                            <i class="ti ti-check"></i> Сохранить
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1350,6 +1388,75 @@ function showItemModal(itemCode) {
     if (modal) modal.remove();
     document.body.insertAdjacentHTML('beforeend', html);
     new bootstrap.Modal(document.getElementById('item-modal')).show();
+}
+
+async function saveItemModal(itemCode) {
+    const item = allItems.find(i => i.item_code === itemCode);
+    if (!item) return;
+
+    const meta = {
+        article: document.getElementById('item-modal-article').value.trim(),
+        supplier: Meta.get(itemCode).supplier || '',
+        purchasePrice: Meta.get(itemCode).purchasePrice || 0,
+        minStock: Meta.get(itemCode).minStock || 0,
+        brands: item._brands || [],
+        partTypes: item._partTypes || [],
+        appliances: item._appliances || [],
+        models: item._models || []
+    };
+
+    Meta.set(itemCode, meta);
+
+    // Update item fields in allItems
+    const location = document.getElementById('item-modal-location').value;
+    const responsible = document.getElementById('item-modal-responsible').value;
+    const group = document.getElementById('item-modal-group').value;
+    const locacia = document.getElementById('item-modal-locacia').value;
+
+    item.location = location;
+    item.responsible = responsible;
+    item.item_group = group;
+    item.locacia = locacia;
+
+    toast('Сохранено!', '');
+    setTimeout(() => { document.querySelector('[data-bs-dismiss="modal"]').click(); }, 500);
+}
+
+async function uploadItemPhoto(itemCode) {
+    const input = document.getElementById('item-modal-photo-input');
+    if (!input.files || !input.files[0]) return;
+
+    toast('Загрузка фото...', '');
+    try {
+        const upRes = await API.uploadFile(input.files[0], itemCode);
+        if (upRes.message && upRes.message.file_url) {
+            await API.update('Item', itemCode, { image: upRes.message.file_url });
+            const item = allItems.find(i => i.item_code === itemCode);
+            if (item) item.image = upRes.message.file_url;
+
+            const imgContainer = document.getElementById('item-modal-img-container');
+            imgContainer.innerHTML = `<img src="${API.imgUrl(upRes.message.file_url)}" alt="" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:8px;">`;
+            toast('Фото загружено!', '');
+        }
+    } catch (e) {
+        toast('Ошибка: ' + e.message, 'error');
+    }
+}
+
+function removeItemPhoto(itemCode) {
+    if (!confirm('Удалить фото?')) return;
+
+    toast('Удаление фото...', '');
+    API.update('Item', itemCode, { image: '' }).then(() => {
+        const item = allItems.find(i => i.item_code === itemCode);
+        if (item) item.image = '';
+
+        const imgContainer = document.getElementById('item-modal-img-container');
+        imgContainer.innerHTML = `<div style="width:100%;height:200px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;border-radius:8px;"><i class="ti ti-photo" style="font-size:80px;color:#cbd5e1;"></i></div>`;
+        toast('Фото удалено!', '');
+    }).catch(e => {
+        toast('Ошибка: ' + e.message, 'error');
+    });
 }
 </script>
 </body>
