@@ -1095,6 +1095,7 @@ function populateFormSelects() {
     document.getElementById('add-group').innerHTML = s.groups.map(g => `<option value="${g}">${g}</option>`).join('');
     document.getElementById('add-location').innerHTML = '<option value="">—</option>' + s.locations.map(l => `<option value="${l}">${l}</option>`).join('');
     document.getElementById('add-responsible').innerHTML = '<option value="">—</option>' + s.responsible.map(r => `<option value="${r}">${r}</option>`).join('');
+    document.getElementById('add-responsible').value = 'labremonta';
 }
 
 function previewAddPhoto(input) {
