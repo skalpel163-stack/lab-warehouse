@@ -775,8 +775,8 @@ function renderGrid() {
                     ? `<img src="${API.imgUrl(item.image)}" style="width:32px;height:32px;object-fit:cover;border-radius:4px;" loading="lazy">`
                     : `<div style="width:32px;height:32px;background:#f1f5f9;border-radius:4px;display:flex;align-items:center;justify-content:center;"><i class="ti ti-photo" style="font-size:14px;color:#94a3b8;"></i></div>`;
                 return `<tr style="cursor:pointer;">
-                    <td onclick="window.location='/product.html?code=${encodeURIComponent(item.item_code)}'">${img}</td>
-                    <td onclick="window.location='/product.html?code=${encodeURIComponent(item.item_code)}'"><div style="font-weight:500;">${escHtml(item.item_name)}</div>${item.notes ? `<div style="font-size:11px;color:var(--lr-text-muted);"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0,60)}${item.notes.length>60?'...':''}</div>`:''}</td>
+                    <td onclick="showItemModal('${item.item_code}')">${img}</td>
+                    <td onclick="showItemModal('${item.item_code}')"><div style="font-weight:500;">${escHtml(item.item_name)}</div>${item.notes ? `<div style="font-size:11px;color:var(--lr-text-muted);"><i class="ti ti-note" style="font-size:11px;"></i> ${escHtml(item.notes).substring(0,60)}${item.notes.length>60?'...':''}</div>`:''}</td>
                     <td>${item.actual_qty} шт.</td>
                     <td>${formatPrice(item.valuation_rate)}</td>
                     <td>${getStatusText(item.warehouse)}</td>
@@ -806,7 +806,7 @@ function renderGrid() {
 
             return `
                 <div class="col-6 col-md-6 col-lg-3">
-                    <a href="/product.html?code=${encodeURIComponent(item.item_code)}" class="card product-card" style="position:relative;text-decoration:none;color:inherit;" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
+                    <div class="card product-card" style="position:relative;cursor:pointer;" onclick="showItemModal('${item.item_code}')" ${item.notes ? `title="${escHtml(item.notes)}"` : ''}>
                         <div style="position:relative;">
                             ${img}
                             ${badge}
@@ -823,7 +823,7 @@ function renderGrid() {
                                 <span>${getStatusText(item.warehouse)}</span>
                             </div>
                         </div>
-                    </a>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -1293,6 +1293,63 @@ function updatePriceFill() {
     const fill = document.getElementById('price-fill');
     fill.style.left = left + '%';
     fill.style.width = (right - left) + '%';
+}
+
+function showItemModal(itemCode) {
+    const item = allItems.find(i => i.item_code === itemCode);
+    if (!item) return;
+
+    const hasImg = !!item.image;
+    const imgHtml = hasImg ? `<img src="${API.imgUrl(item.image)}" alt="" style="max-width:100%;max-height:300px;object-fit:contain;">` : `<div style="width:100%;height:200px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;"><i class="ti ti-photo" style="font-size:80px;color:#cbd5e1;"></i></div>`;
+    const tags = [];
+    if (item._partTypes && item._partTypes[0]) tags.push(`<span class="tag">${item._partTypes[0]}</span>`);
+    if (item._brands && item._brands[0]) tags.push(`<span class="tag brand">${item._brands[0]}</span>`);
+    if (item._appliances && item._appliances[0]) tags.push(`<span class="tag appliance">${item._appliances[0]}</span>`);
+
+    const specs = [];
+    if (item.article) specs.push(['Артикул', item.article]);
+    specs.push(['Локация', item.locация || '—']);
+    specs.push(['Место', item.location || '—']);
+    specs.push(['Ответственный', item.responsible || '—']);
+    specs.push(['Группа товара', item.item_group || '—']);
+
+    const html = `
+        <div class="modal fade" id="item-modal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${escHtml(item.item_name)}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-5">
+                                ${imgHtml}
+                            </div>
+                            <div class="col-md-7">
+                                <div style="font-size:12px;color:#6b7280;margin-bottom:8px;">${item.item_code}</div>
+                                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;">${tags.join('')}</div>
+                                <div style="font-size:24px;font-weight:700;color:var(--lr-primary);margin-bottom:12px;">${formatPrice(item.valuation_rate)}</div>
+                                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border-radius:6px;margin-bottom:12px;font-size:14px;">
+                                    <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;"></span>
+                                    <span>${item.actual_qty} шт. в наличии</span>
+                                </div>
+                                ${item.notes ? `<div style="padding:8px;background:#f0fdf4;border-radius:6px;font-size:13px;margin-bottom:12px;"><strong>Описание:</strong> ${escHtml(item.notes)}</div>` : ''}
+                                <div style="background:#f8f9fa;border-radius:8px;padding:12px;">
+                                    ${specs.map(([k,v]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb;font-size:13px;"><span style="color:#6b7280;">${k}</span><strong>${v}</strong></div>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    let modal = document.getElementById('item-modal');
+    if (modal) modal.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+    new bootstrap.Modal(document.getElementById('item-modal')).show();
 }
 </script>
 </body>
