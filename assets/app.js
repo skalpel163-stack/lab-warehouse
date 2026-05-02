@@ -478,7 +478,7 @@ const Meta = {
 // ===== Settings =====
 const DEFAULT_SETTINGS = {
     locations: ['Авангардная', 'Ленинский', 'Бирюзова', 'Нарния', 'Боксбери', 'У мастера', 'ВЫКУП', 'АВИТО', 'AMWAY'],
-    responsible: [],
+    responsible: ['labremonta'],
     groups: ['Запчасти', 'Доноры']
 };
 
